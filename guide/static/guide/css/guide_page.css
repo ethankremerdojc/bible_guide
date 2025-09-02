@@ -35,6 +35,18 @@ body {
 
 .bible-text {
   font-size: 18px;
-  line-height: 200%;
   letter-spacing: 1px;
+}
+
+.bible-text .verse-word {
+  display: inline-block;
+  cursor: default;
+  padding: 3px;
+  margin: 8px 0;
+}
+
+.bible-text .verse-word:hover {
+  background: white;
+  color: black;
+  cursor: pointer;
 }
