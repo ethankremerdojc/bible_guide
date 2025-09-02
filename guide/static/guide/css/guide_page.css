@@ -1,0 +1,40 @@
+* {
+  font-family: "Roboto";
+}
+
+body {
+  background: #232323;
+  color: white;
+}
+
+#content {
+  padding: 20px;
+}
+
+.bible-text-content {
+  display: flex;
+  flex-direction: column;
+  row-gap: 30px;
+}
+
+/* TEXT HEADER SECTION */
+
+.bible-text-header h1 {
+  font-weight: 400;
+}
+
+.bible-text-header h2 {
+  font-size: 18px;
+}
+
+.bible-text-header i {
+  font-size: 14px;
+}
+
+/* TEXT BODY */
+
+.bible-text {
+  font-size: 18px;
+  line-height: 200%;
+  letter-spacing: 1px;
+}
