@@ -20,6 +20,7 @@ from guide.views import *
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', guide_page, name="guide_page"),
-    path('get_word_info/', get_word_info, name="get_word_info")
+    path('guide/<str:book>/<str:chapter>/', guide_page, name="guide_page"),
+    path('get_word_info/', get_word_info, name="get_word_info"),
+    path('get_chapter_info/', get_chapter_info, name="get_chapter_info")
 ]

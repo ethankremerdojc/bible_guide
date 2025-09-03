@@ -12,19 +12,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title></title>
     <link href="{% static 'guide/css/guide_page.css' %}" rel="stylesheet">
+    <script>
+      let CHAPTERNUMBER = "{{ chapter }}";
+      let BOOKNAME = "{{ book }}";
+    </script>
     <script src="{% static 'guide/js/guide_page.js' %}" defer></script>
   </head>
   <body>
     <div id="content">
       <div class="bible-text-content">
         <div class="bible-text-header">
-          <h1>God’s Unfathomable Love</h1>
-          <h2>Author: John Doe  |  Date: 2000/01/01  |  Other Info: Lorem ipsum blah</h2>
+          <h1>Bible Guide</h1>
+          {% comment %}<h2>Author: John Doe  |  Date: 2000/01/01  |  Other Info: Lorem ipsum blah</h2>
           <i>“If we were asked to read to a dying man who did not know the gospel, we should probably select this chapter as the most suitable one for such an occasion; and what is good for dying men is good for us all, for that is what we are; and how soon we may be actually at the gates of death, none of us can tell.” (Spurgeon)</i>
+          {% endcomment %}
         </div>
 
         <div class="bible-text-body">
-          <h1 class="bible-text-book-chapter-verse">John 3:16</h1>
+          <div id="debug-strong-info"></div>
+          <h1 class="bible-text-book-chapter-verse">{{ book }} {{ chapter }}</h1>
           <p id="bible-text" class="bible-text">
             {% autoescape off %}
             {{ verses_content }}

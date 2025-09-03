@@ -45,8 +45,30 @@ body {
   margin: 8px 0;
 }
 
+.bible-text .verse-number {
+  font-size: 25px;
+}
+
 .bible-text .verse-word:hover {
   background: white;
   color: black;
   cursor: pointer;
+}
+
+.bible-text .verse-word[strongnum=""] {
+  color: #b7b7b7;
+}
+.bible-text .verse-word[strongnum=""]:hover {
+  background: inherit;
+  color: #b7b7b7;
+  cursor: default;
+}
+
+
+
+#debug-strong-info {
+  background: white;
+  padding: 10px;
+  margin: 10px;
+  color: black;
 }
