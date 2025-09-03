@@ -17,7 +17,7 @@
       let BOOKNAME = "{{ book }}";
       let BIBLEBOOKNAMES = {{ biblebooks|safe }};
       let _BIBLECHAPTERCOUNTS = {{ biblechaptercounts|safe }};
-      let CSRFTOKEN = "{% csrf_token %}";
+      let CSRFTOKEN = "{{ csrftoken }}";
 
       let BIBLEBOOKS = BIBLEBOOKNAMES.map(function(e, i) {
         return [e, _BIBLECHAPTERCOUNTS[i]]

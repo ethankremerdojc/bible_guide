@@ -5,6 +5,8 @@ import json
 from guide.word_analysis import *
 from pprint import pprint
 import re
+from django.middleware.csrf import get_token
+
 
 def gen_one_redirect(request):
     return redirect("guide_page", book="genesis", chapter="1")
@@ -134,7 +136,8 @@ def guide_page(request, book, chapter, *args, **kwargs):
         "chapter": chapter,
         "bibleversions": BIBLE_VERSIONS,
         "biblebooks": [b[0] for b in BIBLE_BOOKS],
-        "biblechaptercounts": [b[1] for b in BIBLE_BOOKS] 
+        "biblechaptercounts": [b[1] for b in BIBLE_BOOKS],
+        "csrftoken": get_token(request)
     })
 
 def get_chapter_info(request, *args, **kwargs):
