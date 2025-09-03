@@ -1,20 +1,3 @@
-function getCookie(name) {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== "") {
-    const cookies = document.cookie.split(";");
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
-      if (cookie.startsWith(name + "=")) {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
-    }
-  }
-  return cookieValue;
-}
-
-const csrftoken = getCookie("csrftoken");
-
 function getWordInfo(verse, strongNum) {
   let verseInfo = chapterInfo[verse];
   for (var wordInfo of verseInfo) {
@@ -42,7 +25,7 @@ function collectChapterInfo() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-CSRFToken": csrftoken
+        "X-CSRFToken": CSRFTOKEN
       },
       body: JSON.stringify({
         book: BOOKNAME,
