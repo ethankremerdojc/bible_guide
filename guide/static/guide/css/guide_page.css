@@ -55,6 +55,10 @@ body {
   cursor: pointer;
 }
 
+.bible-text .verse {
+  display: block;
+}
+
 .bible-text .verse-word[strongnum=""] {
   color: #b7b7b7;
 }
