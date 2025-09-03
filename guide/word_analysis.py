@@ -15,7 +15,7 @@ def get_text_biblegateway(book, chapter, version):
     soup = BeautifulSoup(response_text, "html.parser")
     chapter_contents = soup.find('div', class_="result-text-style-normal")
 
-    text_blocks = chapter_contents.select("p .text")
+    text_blocks = chapter_contents.select("p:not(.line) .text, .poetry .line")
 
     result = ""
 
@@ -47,12 +47,28 @@ def get_chapter_bible_hub(book_name, chapter_num):
 
     verses = []
     current_verse = None
-    
-        
-    for table_data in chapter_contents.select(".tablefloat td"):
-        strong_num = table_data.find("span", class_="pos").get_text()
-        strong_text = table_data.find("span", class_="pos").find("a").attrs['title']
-        original_language = table_data.find("span", class_="greek").get_text() #TODO need to select other languages
+
+    language = "greek"
+    posname = "pos"
+    refname = "refmain"
+
+    contents = chapter_contents.select(".tablefloat td")
+    if not contents: # hopefully this is hebrew
+        contents = chapter_contents.select('.tablefloatheb td[valign="middle"]')
+        language = "hebrew"
+        posname = "strongs"
+        refname = "refheb"
+
+    for table_data in contents:
+        if not table_data.get_text().strip():
+            continue
+
+        strong_num = table_data.find("span", class_=posname).get_text()
+        try:
+            strong_text = table_data.find("span", class_=posname).find("a").attrs['title']
+        except AttributeError: # weird punctuation
+            continue
+        original_language = table_data.find("span", class_=language).get_text() #TODO need to select other languages
         english_literal = table_data.find("span", class_="eng").get_text()
 
         word_info = {
@@ -63,7 +79,7 @@ def get_chapter_bible_hub(book_name, chapter_num):
         }
         
         try:
-            verse_num = table_data.find("span", class_="refmain").get_text().replace("\xa0", "")
+            verse_num = table_data.find("span", class_=refname).get_text().replace("\xa0", "")
             
             if current_verse is not None:
                 verses.append(current_verse)
@@ -72,7 +88,7 @@ def get_chapter_bible_hub(book_name, chapter_num):
                 "num": verse_num,
                 "words": []
             }
-        except AttributeError:
+        except AttributeError as e:
             pass
 
         current_verse["words"].append(word_info)

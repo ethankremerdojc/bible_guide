@@ -24,7 +24,14 @@ def wrap_each_word_in_span(text, verse_data, verse_number):
 
 BIBLE_VERSIONS = [
     "ESV",
-    "NIV"
+    "NIV",
+    "NKJV",
+    "KJV",
+    "NASB",
+    "NASV",
+    "NLT",
+    "CSB",
+    "ASV"
 ]
 
 BIBLE_BOOKS = [
@@ -104,6 +111,8 @@ def get_chapter_html(book, chapter, version, chapter_info):
     verses = verses_text.split("\n")
     verses_content = ""
 
+    pprint(verses)
+
     for index, v in enumerate(verses):
         verse_num = index + 1
         verse_num_text = f"verse{verse_num}"
@@ -116,11 +125,12 @@ def get_chapter_html(book, chapter, version, chapter_info):
     return verses_content
 
 def guide_page(request, book, chapter, *args, **kwargs):
-
     return render(request, "guide/guide_page.html", context={
         "book": book,
         "chapter": chapter,
-        "bibleversions": BIBLE_VERSIONS
+        "bibleversions": BIBLE_VERSIONS,
+        "biblebooks": [b[0] for b in BIBLE_BOOKS],
+        "biblechaptercounts": [b[1] for b in BIBLE_BOOKS] 
     })
 
 def get_chapter_info(request, *args, **kwargs):
@@ -187,7 +197,6 @@ def get_word_info_from_verse(verse_info, word):
         if len(new_candidates) == 1:
             return new_candidates[0]
         if len(new_candidates) != 0:
-            print("multiple candidates")
             print(new_candidates)
 
 def get_word_info(request, *args, **kwargs):

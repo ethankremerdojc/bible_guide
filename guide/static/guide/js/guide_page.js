@@ -59,6 +59,42 @@ function collectChapterInfo() {
     })
 }
 
+function populateBookAndChapter() {
+  // uses global BIBLEBOOKS
+  
+  let activeCount = null;
+  let activeBook = null;
+  let bookSelector = document.getElementById("book");
+  bookSelector.innerHTML = '';
+
+  for (var [bookName, chapterCount] of BIBLEBOOKS) {
+    let option = document.createElement("option");
+    option.value = bookName;
+    option.innerHTML = bookName;
+    bookSelector.appendChild(option);
+
+    if (bookName.toLowerCase() == BOOKNAME.toLowerCase()) {
+      activeCount = chapterCount;
+      activeBook = bookName;
+    }
+  }
+
+  bookSelector.value = activeBook;
+
+  let chapterSelector = document.getElementById("chapter");
+  chapterSelector.innerHTML = '';
+
+  for (let i = 0; i < activeCount; i++) {
+    let option = document.createElement("option");
+    let num = i + 1;
+    option.value = num;
+    option.innerHTML = num;
+    chapterSelector.appendChild(option);
+  }
+
+  chapterSelector.value = CHAPTERNUMBER;
+}
+
 // -----------------------------
 // START 
 // -----------------------------
@@ -68,20 +104,16 @@ function run() {
   bibleTextBlock.innerHTML = chapterText;
 
   const debugTextBlock = document.getElementById("debug-strong-info");
-  console.log("chapterInfo", chapterInfo);
 
   let hoveredWord = null;
 
   bibleTextBlock.addEventListener("click", e => {
     if (e.target.tagName == "SPAN") {
-      //console.log("hovered word: ", e.target);
       hoveredWord = e.target;
       
       let strongNum = e.target.getAttribute("strongnum");
       let verse = e.target.parentNode.id.replace("verse", "");
-      //console.log(strongNum, verse);
       let wordInfo = getWordInfo(verse, strongNum);
-      console.log(wordInfo);
 
       let debugInfo = `English: ${wordInfo.english} | Greek: ${wordInfo.original_language} | Strong Number: ${wordInfo.strong_num} | Strong Text: ${wordInfo.strong_text}`
       debugTextBlock.innerHTML = debugInfo;
@@ -94,9 +126,33 @@ let chapterInfo = null;
 let chapterText = null;
 
 const versionSelector = document.getElementById("bibleversions");
+console.log(getBibleVersion());
+versionSelector.value = getBibleVersion();
 versionSelector.addEventListener("change", e => {
   setBibleVersion(e.target.value);
   collectChapterInfo();
 })
 
+populateBookAndChapter();
+
+const bookSelector = document.getElementById("book");
+bookSelector.addEventListener("change", e => {
+  BOOKNAME = e.target.value;
+  CHAPTERNUMBER = 1;
+  populateBookAndChapter();
+})
+
 collectChapterInfo();
+
+const goButton = document.getElementById("gobutton");
+goButton.onclick = () => {
+
+  let bookSelector = document.getElementById("book");
+  let chapterSelector = document.getElementById("chapter");
+
+  let selectedBook = bookSelector.value;
+  let selectedChapter = chapterSelector.value;
+
+  let newPathname = `/guide/${selectedBook.toLowerCase()}/${selectedChapter}/`;
+  window.location.pathname = newPathname;
+}
