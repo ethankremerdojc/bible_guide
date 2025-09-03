@@ -1,9 +1,13 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+
 from django.http import JsonResponse
 import json
 from guide.word_analysis import *
 from pprint import pprint
 import re
+
+def gen_one_redirect(request):
+    return redirect("guide_page", book="genesis", chapter="1")
 
 def wrap_each_word_in_span(text, verse_data, verse_number):
     words = text.split(" ")

@@ -19,6 +19,7 @@ from django.urls import path
 from guide.views import *
 
 urlpatterns = [
+    path('', gen_one_redirect, name="gen_one_redirect"),
     path('admin/', admin.site.urls),
     path('guide/<str:book>/<str:chapter>/', guide_page, name="guide_page"),
     path('get_word_info/', get_word_info, name="get_word_info"),
