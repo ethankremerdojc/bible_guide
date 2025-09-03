@@ -6,8 +6,8 @@ def get_cleaned_alpha_text(text):
     allowed_chars = "abcdefghijklmnopqrstuvwxyz0123456789 "
     return "".join(t for t in text.lower() if t in allowed_chars)
 
-def get_esv_text_biblegateway(book, chapter):
-    url = f"https://www.biblegateway.com/passage/?search={book}%20{chapter}&version=ESV"
+def get_text_biblegateway(book, chapter, version):
+    url = f"https://www.biblegateway.com/passage/?search={book}%20{chapter}&version={version}"
     response = requests.get(url)
     response.encoding = "utf-8"
     response_text = response.text

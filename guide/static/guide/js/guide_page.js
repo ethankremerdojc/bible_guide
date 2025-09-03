@@ -13,8 +13,6 @@ function getCookie(name) {
   return cookieValue;
 }
 
-const csrftoken = getCookie("csrftoken");
-
 function getWordInfo(verse, strongNum) {
   let verseInfo = chapterInfo[verse];
   for (var wordInfo of verseInfo) {
@@ -24,10 +22,53 @@ function getWordInfo(verse, strongNum) {
   }
 }
 
+function setBibleVersion(version) {
+  localStorage.setItem("bibleversion", version)
+}
+
+function getBibleVersion() {
+  let version = localStorage.getItem("bibleversion");
+  if (!version) {
+    version = "ESV"
+  }
+
+  return version
+}
+
+function collectChapterInfo() {
+  fetch("/get_chapter_info/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrftoken
+      },
+      body: JSON.stringify({
+        book: BOOKNAME,
+        chapter: CHAPTERNUMBER,
+        version: getBibleVersion()
+      })
+    })
+    .then (res => res.json())
+    .then(data => {
+      chapterInfo = data.chapterInfo;
+      chapterText = data.chapterText;
+      run()
+    })
+    .catch(err => {
+      console.error("error:", err)
+    })
+}
+
+// -----------------------------
+// START 
+// -----------------------------
+
 function run() {
   const bibleTextBlock = document.getElementById("bible-text");
+  bibleTextBlock.innerHTML = chapterText;
+
   const debugTextBlock = document.getElementById("debug-strong-info");
-  console.log(chapterInfo);
+  console.log("chapterInfo", chapterInfo);
 
   let hoveredWord = null;
 
@@ -48,26 +89,14 @@ function run() {
   })
 }
 
+const csrftoken = getCookie("csrftoken");
 let chapterInfo = null;
+let chapterText = null;
 
-fetch("/get_chapter_info/", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRFToken": csrftoken
-    },
-    body: JSON.stringify({
-      book: BOOKNAME,
-      chapter: CHAPTERNUMBER
-    })
-  })
-  .then (res => res.json())
-  .then(data => {
-    chapterInfo = data;
-    run()
-  })
-  .catch(err => {
-    console.error("error:", err)
-  })
+const versionSelector = document.getElementById("bibleversions");
+versionSelector.addEventListener("change", e => {
+  setBibleVersion(e.target.value);
+  collectChapterInfo();
+})
 
-
+collectChapterInfo();

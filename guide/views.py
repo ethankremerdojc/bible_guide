@@ -22,16 +22,87 @@ def wrap_each_word_in_span(text, verse_data, verse_number):
     return result
 
 
-def guide_page(request, book, chapter, *args, **kwargs):
+BIBLE_VERSIONS = [
+    "ESV",
+    "NIV"
+]
 
-    bible_gateway_text = get_esv_text_biblegateway(book, chapter)
+BIBLE_BOOKS = [
+    ("Genesis", 50),
+    ("Exodus", 40),
+    ("Leviticus", 27),
+    ("Numbers", 36),
+    ("Deuteronomy", 34),
+    ("Joshua", 24),
+    ("Judges", 21),
+    ("Ruth", 4),
+    ("1 Samuel", 31),
+    ("2 Samuel", 24),
+    ("1 Kings", 22),
+    ("2 Kings", 25),
+    ("1 Chronicles", 29),
+    ("2 Chronicles", 36),
+    ("Ezra", 10), 
+    ("Nehemiah", 13),
+    ("Esther", 10),
+    ("Job", 42),
+    ("Psalm", 150),
+    ("Proverbs", 31),
+    ("Ecclesiastes", 12),
+    ("Song of Solomon", 8),
+    ("Isaiah", 66),
+    ("Jeremiah", 52),
+    ("Lamentations", 5),
+    ("Ezekiel", 48),
+    ("Daniel", 12),
+    ("Hosea", 14),
+    ("Joel", 3),
+    ("Amos", 9),
+    ("Obadiah", 1),
+    ("Jonah", 4),
+    ("Micah", 7),
+    ("Nahum", 3),
+    ("Habakkuk", 3),
+    ("Zephaniah", 3),
+    ("Haggai", 2),
+    ("Zechariah", 14),
+    ("Malachi", 4),
+    
+    ("Matthew", 28),
+    ("Mark", 16),
+    ("Luke", 24),
+    ("John", 21),
+    ("Acts", 28),
+    ("Romans", 16),
+    ("1 Corinthians", 16),
+    ("2 Corinthians", 13),
+    ("Galatians", 6),
+    ("Ephesians", 6),
+    ("Philippians", 4),
+    ("Colossians", 4),
+    ("1 Thessalonians", 5),
+    ("2 Thessalonians", 3),
+    ("1 Timothy", 6),
+    ("2 Timothy", 4),
+    ("Titus", 3),
+    ("Philemon", 1),
+    ("Hebrews", 13),
+    ("James", 5),
+    ("1 Peter", 5),
+    ("2 Peter", 3),
+    ("1 John", 5),
+    ("2 John", 1),
+    ("3 John", 1),
+    ("Jude", 1),
+    ("Revelation", 22)
+]
+
+def get_chapter_html(book, chapter, version, chapter_info):
+    bible_gateway_text = get_text_biblegateway(book, chapter, version)
 
     verses_text = re.sub(r"\[\w\]", "", bible_gateway_text) # get rid of [a], [k] etc.
     verses = verses_text.split("\n")
-
     verses_content = ""
-
-    chapter_info = get_chapter_bible_hub(book_name=book, chapter_num=chapter)
 
     for index, v in enumerate(verses):
         verse_num = index + 1
@@ -42,11 +113,14 @@ def guide_page(request, book, chapter, *args, **kwargs):
         verse_span = f'<span class="verse" id="{verse_num_text}">{verse_words_wrapped}</span>'
         verses_content += verse_span
 
+    return verses_content
+
+def guide_page(request, book, chapter, *args, **kwargs):
+
     return render(request, "guide/guide_page.html", context={
-        "verses_content": verses_content,
-        "chapter_info": chapter_info,
         "book": book,
-        "chapter": chapter
+        "chapter": chapter,
+        "bibleversions": BIBLE_VERSIONS
     })
 
 def get_chapter_info(request, *args, **kwargs):
@@ -54,9 +128,12 @@ def get_chapter_info(request, *args, **kwargs):
         data = json.loads(request.body)
         book = get_cleaned_alpha_text(data.get("book"))
         chapter = data.get("chapter")
+        version = data.get("version")
 
         chapter_info = get_chapter_bible_hub(book_name=book, chapter_num=chapter)
-        return JsonResponse(chapter_info)
+        chapter_html = get_chapter_html(book=book, chapter=chapter, version=version, chapter_info=chapter_info)
+
+        return JsonResponse({"chapterInfo": chapter_info, "chapterText": chapter_html})
 
 def get_word_info_from_verse(verse_info, word):
     cleaned_word = get_cleaned_alpha_text(word)

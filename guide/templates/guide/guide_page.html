@@ -26,16 +26,28 @@
           {% comment %}<h2>Author: John Doe  |  Date: 2000/01/01  |  Other Info: Lorem ipsum blah</h2>
           <i>“If we were asked to read to a dying man who did not know the gospel, we should probably select this chapter as the most suitable one for such an occasion; and what is good for dying men is good for us all, for that is what we are; and how soon we may be actually at the gates of death, none of us can tell.” (Spurgeon)</i>
           {% endcomment %}
+          <label for="book"></label>
+          <input name="book" />
+
+          <label for="chapter"></label>
+          <input name="chapter" />
+          
+          <button>Go</button>
+
+          <br />
+
+          <select id="bibleversions">
+            {% for bibleversion in bibleversions %}
+              <option value="{{ bibleversion }}">{{ bibleversion }}</option>
+            {% endfor %}
+          </select>
+
         </div>
 
         <div class="bible-text-body">
           <div id="debug-strong-info"></div>
           <h1 class="bible-text-book-chapter-verse">{{ book }} {{ chapter }}</h1>
-          <p id="bible-text" class="bible-text">
-            {% autoescape off %}
-            {{ verses_content }}
-            {% endautoescape %}
-          </p>
+          <p id="bible-text" class="bible-text"></p>
         </div>
       </div>
     </div>
