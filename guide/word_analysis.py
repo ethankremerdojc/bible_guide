@@ -1,13 +1,13 @@
 import requests
 import json
 from bs4 import BeautifulSoup, NavigableString
-
+from pprint import pprint
 def get_cleaned_alpha_text(text):
     allowed_chars = "abcdefghijklmnopqrstuvwxyz0123456789 "
     return "".join(t for t in text.lower() if t in allowed_chars)
 
 def get_text_biblegateway(book, chapter, version):
-    url = f"https://www.biblegateway.com/passage/?search={book}%20{chapter}&version={version}"
+    url = f"https://www.biblegateway.com/passage/?search={book.replace(" ", "+")}%20{chapter}&version={version}"
     response = requests.get(url)
     response.encoding = "utf-8"
     response_text = response.text
@@ -15,29 +15,63 @@ def get_text_biblegateway(book, chapter, version):
     soup = BeautifulSoup(response_text, "html.parser")
     chapter_contents = soup.find('div', class_="result-text-style-normal")
 
-    text_blocks = chapter_contents.select("p:not(.line) .text, .poetry .line")
+    text_blocks = chapter_contents.select('p .text')
 
-    result = ""
+    verses = {
+        "1": ""
+    }
+    verse_number = "1"
 
     for block in text_blocks:
-
-        parts = []
         for child in block:
             if isinstance(child, NavigableString):
-                parts.append(str(child))
-            elif child.name == "span" and "woj" in child.get("class", []):
-                child_text_nodes = child.find_all(string=True, recursive=False)
-                parts.append("".join(child_text_nodes).strip())
+                verses[verse_number] += str(child).strip() + " "
+                continue
+            
+            if "versenum" in child.get("class", []):
+                verse_number = child.get_text().replace("&nbsp;", "").replace("\xa0", "")
+                verses[verse_number] = ""
+                continue
 
-        joined_parts = "".join(parts).strip()
-        result += joined_parts + "\n"
+            for subchild in child:
 
-    result = result [:-1] # get rid of last \n
+                ignore_classes = [
+                    "crossreference",
+                    "footnote",
+                    "chapternum"
+                ]
+                
+                do_skip = False
+                for ic in ignore_classes:
+                    if ic in subchild.parent.get("class", []):
+                        do_skip = True
+                if do_skip:
+                    continue
+                
+                if isinstance(subchild, NavigableString):
+                    verses[verse_number] += str(subchild).strip() + " "
+                    continue
+
+                if "versenum" in subchild.get("class", []):
+                    verse_number = subchild.get_text().replace("&nbsp;", "").replace("\xa0", "")
+                    verses[verse_number] = ""
+
+            #elif (child.name == "span" and "woj" in child.get("class", [])) or (child.name == "span" and "text" in child.get("class", [])):
+            #    child_text_nodes = child.find_all(string=True, recursive=False)
+            #    parts.append("".join(child_text_nodes).strip())
+
+        #verses[verse_number] += joined_parts + "\n"
+
+    tup_version = sorted([(vnum, verse) for vnum, verse in verses.items()], key=lambda x: int(x[0]))
+    result = ""
+    for t in tup_version:
+        result += t[1] + "\n"
+    result = result[:-1]
 
     return result
 
 def get_chapter_bible_hub(book_name, chapter_num):
-    url = f"https://biblehub.com/interlinear/{book_name}/{chapter_num}.htm"
+    url = f"https://biblehub.com/interlinear/{book_name.replace(' ', '_')}/{chapter_num}.htm"
     response = requests.get(url)
     response.encoding = "utf-8"
     response_text = response.text

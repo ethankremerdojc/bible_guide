@@ -59,7 +59,7 @@ BIBLE_BOOKS = [
     ("Nehemiah", 13),
     ("Esther", 10),
     ("Job", 42),
-    ("Psalm", 150),
+    ("Psalms", 150),
     ("Proverbs", 31),
     ("Ecclesiastes", 12),
     ("Song of Solomon", 8),
@@ -116,8 +116,8 @@ def get_chapter_html(book, chapter, version, chapter_info):
     verses_text = re.sub(r"\[\w\]", "", bible_gateway_text) # get rid of [a], [k] etc.
     verses = verses_text.split("\n")
     verses_content = ""
-
     pprint(verses)
+    pprint(len(verses))
 
     for index, v in enumerate(verses):
         verse_num = index + 1
