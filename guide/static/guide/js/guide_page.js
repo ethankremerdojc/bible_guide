@@ -13,6 +13,8 @@ function getCookie(name) {
   return cookieValue;
 }
 
+const csrftoken = getCookie("csrftoken");
+
 function getWordInfo(verse, strongNum) {
   let verseInfo = chapterInfo[verse];
   for (var wordInfo of verseInfo) {
@@ -118,7 +120,6 @@ function run() {
   })
 }
 
-const csrftoken = getCookie("csrftoken");
 let chapterInfo = null;
 let chapterText = null;
 
