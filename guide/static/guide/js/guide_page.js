@@ -103,20 +103,17 @@ function run() {
   const bibleTextBlock = document.getElementById("bible-text");
   bibleTextBlock.innerHTML = chapterText;
 
-  const debugTextBlock = document.getElementById("debug-strong-info");
-
-  let hoveredWord = null;
-
   bibleTextBlock.addEventListener("click", e => {
     if (e.target.tagName == "SPAN") {
-      hoveredWord = e.target;
-      
+      const debugText = document.getElementById("debug-content");
+
+      debugTextBlock.style.display = "block";
       let strongNum = e.target.getAttribute("strongnum");
       let verse = e.target.parentNode.id.replace("verse", "");
       let wordInfo = getWordInfo(verse, strongNum);
 
       let debugInfo = `English: ${wordInfo.english} | Greek: ${wordInfo.original_language} | Strong Number: ${wordInfo.strong_num} | Strong Text: ${wordInfo.strong_text}`
-      debugTextBlock.innerHTML = debugInfo;
+      debugText.innerHTML = debugInfo;
     }
   })
 }
@@ -156,3 +153,12 @@ goButton.onclick = () => {
   let newPathname = `/guide/${selectedBook.toLowerCase()}/${selectedChapter}/`;
   window.location.pathname = newPathname;
 }
+
+const closeInfoButton = document.getElementById("close");
+closeInfoButton.onclick = () => {
+  debugTextBlock.style.display = "none";
+}
+
+const debugTextBlock = document.getElementById("debug-strong-info");
+debugTextBlock.style.display = "none";
+

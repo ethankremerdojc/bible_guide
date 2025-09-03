@@ -44,7 +44,10 @@
         </div>
 
         <div class="bible-text-body">
-          <div id="debug-strong-info"></div>
+          <div id="debug-strong-info">
+            <div id="debug-content"></div>
+            <button id="close">X</button>
+          </div>
           <select id="bibleversions">
             {% for bibleversion in bibleversions %}
               <option value="{{ bibleversion }}">{{ bibleversion }}</option>
