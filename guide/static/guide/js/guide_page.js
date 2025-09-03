@@ -37,6 +37,7 @@ function collectChapterInfo() {
     .then(data => {
       chapterInfo = data.chapterInfo;
       chapterText = data.chapterText;
+      console.log(data);
       run()
     })
     .catch(err => {
@@ -97,7 +98,8 @@ function run() {
       let verse = e.target.parentNode.id.replace("verse", "");
       let wordInfo = getWordInfo(verse, strongNum);
 
-      let debugInfo = `English: ${wordInfo.english} | Greek: ${wordInfo.original_language} | Strong Number: ${wordInfo.strong_num} | Strong Text: ${wordInfo.strong_text}`
+      let debugInfo = `
+        <div>English: <b>${wordInfo.english}</b></div><div><span>Original Language: </span><span class="originallanguage">${wordInfo.original_language}</span><span class="strongnum">(${wordInfo.strong_num})</span></div><div class="strongtext">${wordInfo.strong_text}</div>`
       debugText.innerHTML = debugInfo;
     }
   })

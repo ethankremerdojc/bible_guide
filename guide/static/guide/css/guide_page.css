@@ -88,6 +88,30 @@ body {
   top: 0;
 }
 
+#debug-strong-info .strongtext {
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+#debug-strong-info .strongnum {
+  font-style: italic;
+  font-size: 12px;
+}
+
+#debug-strong-info span {
+  display: inline-block;
+}
+
+#debug-strong-info b {
+  text-transform: capitalize;
+}
+
+#debug-strong-info .originallanguage {
+  margin: 0 8px;
+  font-weight: bold;
+  font-size: 20px;
+}
+
 #close {
   position: absolute;
   top: 0;
