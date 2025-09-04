@@ -200,6 +200,7 @@ def get_word_info_from_verse(verse_info, _word):
 
     if len(set(candidate_numbers)) == 0:
         word_ends = [
+            "ites",
             "ing",
             "er",
             "ed",

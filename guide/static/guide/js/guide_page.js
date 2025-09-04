@@ -37,6 +37,10 @@ function collectChapterInfo() {
     .then(data => {
       chapterInfo = data.chapterInfo;
       chapterText = data.chapterText;
+
+      const loadingContainer = document.getElementById("loader-container");
+      loadingContainer.style.display = "none";
+
       console.log(data);
       run()
     })
@@ -128,6 +132,7 @@ bookSelector.addEventListener("change", e => {
 })
 
 collectChapterInfo();
+
 
 const goButton = document.getElementById("gobutton");
 goButton.onclick = () => {
