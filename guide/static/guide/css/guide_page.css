@@ -33,6 +33,10 @@ body {
 
 /* TEXT BODY */
 
+.bible-text-book-chapter-verse {
+  text-transform: capitalize;
+}
+
 .bible-text {
   font-size: 18px;
   letter-spacing: 1px;
@@ -77,12 +81,16 @@ body {
 
 .bible-text-content #gobutton {
   padding: 4px 20px;
+  background-color: #a3f3a3;
+  border: solid white 3px;
+  border-radius: 8px;
+  font-weight: 600;
 }
 
 #debug-strong-info {
   background: white;
   padding: 24px;
-  margin: 10px;
+  margin: 10px 0px;
   color: black;
   position: sticky;
   top: 0;

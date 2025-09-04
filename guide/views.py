@@ -111,19 +111,18 @@ BIBLE_BOOKS = [
 ]
 
 def get_chapter_html(book, chapter, version, chapter_info):
-    bible_gateway_text = get_text_biblegateway(book, chapter, version)
-
-    verses_text = re.sub(r"\[\w\]", "", bible_gateway_text) # get rid of [a], [k] etc.
-    verses = verses_text.split("\n")
+    verses, headings = get_text_biblegateway(book, chapter, version)
     verses_content = ""
-    pprint(verses)
-    pprint(len(verses))
 
-    for index, v in enumerate(verses):
-        verse_num = index + 1
+    for verse_num, verse in verses:
+
+        heading = headings.get(verse_num)
+        if heading:
+            verses_content += f"<h3>{heading}</h3>"
+
         verse_num_text = f"verse{verse_num}"
 
-        verse_words_wrapped = wrap_each_word_in_span(v, chapter_info[str(verse_num)], verse_num)
+        verse_words_wrapped = wrap_each_word_in_span(verse, chapter_info[str(verse_num)], verse_num)
 
         verse_span = f'<span class="verse" id="{verse_num_text}">{verse_words_wrapped}</span>'
         verses_content += verse_span

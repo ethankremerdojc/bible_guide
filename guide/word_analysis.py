@@ -2,6 +2,7 @@ import requests
 import json
 from bs4 import BeautifulSoup, NavigableString
 from pprint import pprint
+import re
 def get_cleaned_alpha_text(text):
     allowed_chars = "abcdefghijklmnopqrstuvwxyz0123456789 "
     return "".join(t for t in text.lower() if t in allowed_chars)
@@ -15,14 +16,22 @@ def get_text_biblegateway(book, chapter, version):
     soup = BeautifulSoup(response_text, "html.parser")
     chapter_contents = soup.find('div', class_="result-text-style-normal")
 
-    text_blocks = chapter_contents.select('p .text')
+    text_blocks = chapter_contents.select('p .text, h3')
 
     verses = {
         "1": ""
     }
+
+    headings = {}
+
     verse_number = "1"
 
     for block in text_blocks:
+
+        if block.name == "h3":
+            headings[verse_number] = block.get_text()
+            continue
+
         for child in block:
             if isinstance(child, NavigableString):
                 verses[verse_number] += str(child).strip() + " "
@@ -62,13 +71,15 @@ def get_text_biblegateway(book, chapter, version):
 
         #verses[verse_number] += joined_parts + "\n"
 
-    tup_version = sorted([(vnum, verse) for vnum, verse in verses.items()], key=lambda x: int(x[0]))
-    result = ""
-    for t in tup_version:
-        result += t[1] + "\n"
-    result = result[:-1]
+    tup_version = sorted([(vnum, re.sub(r"\[\w\]", "", verse)) for vnum, verse in verses.items()], key=lambda x: int(x[0]))
+    #result = ""
+    #for t in tup_version:
+    #    if headings.get(t[0]):
+    #        result += f"|{headings.get(t[0])}|"
+    #    result += t[1] + "\n"
+    #result = result[:-1]
 
-    return result
+    return tup_version, headings
 
 def get_chapter_bible_hub(book_name, chapter_num):
     url = f"https://biblehub.com/interlinear/{book_name.replace(' ', '_')}/{chapter_num}.htm"

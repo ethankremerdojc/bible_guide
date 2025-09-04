@@ -70,12 +70,14 @@ function populateBookAndChapter() {
   let chapterSelector = document.getElementById("chapter");
   chapterSelector.innerHTML = '';
 
+  
   for (let i = 0; i < activeCount; i++) {
     let option = document.createElement("option");
     let num = i + 1;
     option.value = num;
     option.innerHTML = num;
     chapterSelector.appendChild(option);
+    CURRENTBOOKCHAPTERCOUNT = num;
   }
 
   chapterSelector.value = CHAPTERNUMBER;
@@ -104,7 +106,7 @@ function run() {
     }
   })
 }
-
+let CURRENTBOOKCHAPTERCOUNT = null;
 let chapterInfo = null;
 let chapterText = null;
 
@@ -140,6 +142,27 @@ goButton.onclick = () => {
   window.location.pathname = newPathname;
 }
 
+const prevButton = document.getElementById("previouschapter");
+const nextButton = document.getElementById("nextchapter");
+
+if (CHAPTERNUMBER == 1) {
+  prevButton.style.display = "none";
+}
+
+if (CURRENTBOOKCHAPTERCOUNT == CHAPTERNUMBER) {
+  nextButton.style.display = "none";
+}
+
+nextButton.onclick = () => {
+  let newPathname = `/guide/${BOOKNAME}/${Number(CHAPTERNUMBER) + 1}/`;
+  window.location.pathname = newPathname;
+}
+
+prevButton.onclick = () => {
+  let newPathname = `/guide/${BOOKNAME}/${Number(CHAPTERNUMBER) - 1}/`;
+  window.location.pathname = newPathname;
+}
+ 
 const closeInfoButton = document.getElementById("close");
 closeInfoButton.onclick = () => {
   debugTextBlock.style.display = "none";
