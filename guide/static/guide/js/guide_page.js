@@ -101,7 +101,7 @@ function run() {
       let wordInfo = getWordInfo(verse, strongNum);
 
       let debugInfo = `
-        <div>English: <b>${wordInfo.english}</b></div><div><span>Original Language: </span><span class="originallanguage">${wordInfo.original_language}</span><span class="strongnum">(${wordInfo.strong_num})</span></div><div class="strongtext">${wordInfo.strong_text}</div>`
+        <div>English: <b>${wordInfo.english}</b></div><div><span>Original Language: </span><span class="originallanguage">${wordInfo.original_language}</span><span class="strongnum"><a href="https://biblehub.com/${wordInfo.language_type}/${wordInfo.strong_num}.htm" target="_blank">(${wordInfo.strong_num})</a></span></div><div class="strongtext">${wordInfo.strong_text}</div>`
       debugText.innerHTML = debugInfo;
     }
   })

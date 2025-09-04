@@ -120,6 +120,7 @@ def get_chapter_bible_hub(book_name, chapter_num):
             "strong_num": strong_num,
             "strong_text": strong_text[strong_text.index(":") + 2:], # everything after : in Strongs Greek 1234: ...
             "original_language": original_language,
+            "language_type": language,
             "english": get_cleaned_alpha_text(english_literal.replace("\xa0", " "))
         }
         
