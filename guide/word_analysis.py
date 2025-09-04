@@ -82,12 +82,14 @@ def get_text_biblegateway(book, chapter, version):
     return tup_version, headings
 
 def get_chapter_bible_hub(book_name, chapter_num):
+    # if this gets ip banned, (like home network) we can make the request from the users browser, then 
+    # send that to the backend with the initial post request
     url = f"https://biblehub.com/interlinear/{book_name.replace(' ', '_')}/{chapter_num}.htm"
     response = requests.get(url)
     response.encoding = "utf-8"
-    response_text = response.text
+    response_html = response.text
 
-    soup = BeautifulSoup(response_text, "html.parser")
+    soup = BeautifulSoup(response_html, "html.parser")
     chapter_contents = soup.select(".chap")[0]
 
     verses = []
@@ -107,10 +109,23 @@ def get_chapter_bible_hub(book_name, chapter_num):
     for table_data in contents:
         if not table_data.get_text().strip():
             continue
+        
+        strongs_title_pattern = r'<[^<]*title="([^>]*)>'
 
         strong_num = table_data.find("span", class_=posname).get_text()
+
         try:
-            strong_text = table_data.find("span", class_=posname).find("a").attrs['title']
+            strong_a_tag = table_data.find("span", class_=posname).find("a")
+
+            if len(strong_a_tag.attrs.keys()) == 2: # should only have href and title, if more than something went wrong on their end
+                strong_text = re.search(strongs_title_pattern, str(strong_a_tag)).group(1)
+            else:
+                # something like this:
+                #<a href="/greek/4639.htm" title="Strong\'s Greek 4639: Apparently a primary word; " shade"="" or="" a="" shadow="" (darkness="" of="" error="" an="" adumbration)."="">4639</a>
+                # find original html, bs4 gonna screw everything up
+                a_tag = re.search(f'<a[^>]*>{strong_num}</a>', response_html).group()
+                strong_text = re.search(f'title="(.*)">', a_tag).group(1)
+
         except AttributeError: # weird punctuation
             continue
         original_language = table_data.find("span", class_=language).get_text() #TODO need to select other languages

@@ -152,13 +152,16 @@ body {
   padding: 0;
 }
 
-#currentbookandchapter h1 {
+#currentbookandchapter h1, #currentbookandchapter button {
   padding: 5px 10px;
   margin: 0;
   color: black;
   background: white;
   font-size: 18px;
   text-transform: capitalize;
+  margin: 0px 5px;
+  border: none;
+  outline: none;
 }
 
 .loader-container {

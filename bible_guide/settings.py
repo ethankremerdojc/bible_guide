@@ -128,7 +128,6 @@ BIBLE_VERSIONS = [
     "NKJV",
     "KJV",
     "NASB",
-    "NASV",
     "NLT",
     "CSB",
     "ASV"
