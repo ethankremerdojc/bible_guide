@@ -73,7 +73,7 @@ body {
 }
 
 .bible-text-content {
-  min-height: calc(100vh - 40px);
+  min-height: calc(100% - 40px);
 }
 
 .bible-text-content select, .bible-text-content button {
