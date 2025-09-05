@@ -81,13 +81,13 @@ def get_text_biblegateway(book, chapter, version):
 
     return tup_version, headings
 
-def get_chapter_bible_hub(book_name, chapter_num):
+def get_chapter_bible_hub(response_html):
     # if this gets ip banned, (like home network) we can make the request from the users browser, then 
-    # send that to the backend with the initial post request
-    url = f"https://biblehub.com/interlinear/{book_name.replace(' ', '_')}/{chapter_num}.htm"
-    response = requests.get(url)
-    response.encoding = "utf-8"
-    response_html = response.text
+    ## send that to the backend with the initial post request
+    #url = f"https://biblehub.com/interlinear/{book_name.replace(' ', '_')}/{chapter_num}.htm"
+    #response = requests.get(url)
+    #response.encoding = "utf-8"
+    #response_html = response.text
 
     soup = BeautifulSoup(response_html, "html.parser")
     chapter_contents = soup.select(".chap")[0]
