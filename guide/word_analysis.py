@@ -176,21 +176,6 @@ def get_bible_book_index(book_name):
     lowercase_books = [ b[0].lower() for b in BIBLE_BOOKS ]
     return lowercase_books.index(book_name) + 1
 
-#    with open(NT_MAPPING_PKL_PATH, 'rb') as ntmf:
-#        NT_MAPPING = pickle.load(ntmf)
-#    with open(NT_STRONG_PKL_PATH, 'rb') as ntdf:
-#        NT_STRONG_DATA = pickle.load(ntdf)
-
-"""
-word_info = {
-    "strong_num": strong_num,
-    "strong_text": strong_text[strong_text.index(":") + 2:], # everything after : in Strongs Greek 1234: ...
-    "original_language": original_language,
-    "language_type": language,
-    "english": get_cleaned_alpha_text(english_literal.replace("\xa0", " "))
-}
-"""
-
 def get_ot_strongs_text(data):
     strong_data = data['strongs']
 
@@ -200,10 +185,19 @@ def get_ot_strongs_text(data):
         else:
             meaning_def = ""
 
+        if type(meaning_def) == list:
+            meaning_def = " [" + ", ".join(meaning_def) + "] "
+
         if strong_data['meaning'].get("#text"):
             meaning = strong_data['meaning']['#text']
         else:
             meaning = ""
+
+
+        if ";" in meaning:
+            meaning = meaning.replace(";", meaning_def)
+            meaning_def = ""
+
     else:
         meaning_def = ""
         meaning = ""
@@ -216,13 +210,27 @@ def get_ot_strongs_text(data):
     strong_text = strong_data.get('#text', "") 
 
     bdb_data = data['bdb']
+
+    bdb_usages = ""
+
     if bdb_data:
         bdb_text = bdb_data['#text']
+
+        bdb_def = data['bdb'].get('def')
+        if bdb_def:
+            bdb_usages = ", ".join(bdb_def)
     else:
         bdb_text = ""
+   
 
-    return f'{meaning_def}: {meaning} | {usage} | {strong_text} BDB: {bdb_text}'
+    result = f'<b>Meaning:</b><p>{meaning_def} {meaning}</p><br/><br/><b>Usages:</b><p>{usage}</p><p>{strong_text}</p><b>BDB:</b><p>{bdb_usages}</p><p>{bdb_text}</p>'
+    
+    #if data.get("bdb"):
+    #    print(result)
+    #    pprint(data)
+    #    input()
 
+    return result
 
 def get_formatted_ot_data(data):
     strong_num = data["strongs"]["@id"]
@@ -245,8 +253,12 @@ def get_formatted_ot_data(data):
 
     ref_strong_usage = []
     if data["strongs"].get('reference_words'):
-        ref_strong_usage = data["strongs"]["reference_words"][0]["usage"]
-   
+        try:
+            ref_strong_usage = data["strongs"]["reference_words"][0]["usage"]
+        except KeyError:
+            ref_strong_usage = ""
+        
+        # wrong maybe
         if type(strong_usage) == str:
             strong_usage = [strong_usage]
  
@@ -312,7 +324,7 @@ def get_ot_chapter_data(book_index, chapter):
     return result
 
 def get_nt_chapter_data(book_index, chapter):
-    pass
+    raise NotImplementedError
 
 def get_chapter_data(book, chapter):
     bible_book_index = get_bible_book_index(book)
