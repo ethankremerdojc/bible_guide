@@ -25,23 +25,21 @@ def get_chapter_info(request, *args, **kwargs):
     book = get_cleaned_alpha_text(data.get("book"))
     chapter = data.get("chapter")
     version = data.get("version")
-    bible_hub_html = data.get("html")
 
-    print("got html")
-
-    chapter_info = get_chapter_bible_hub(response_html=bible_hub_html)
+    chapter_info = get_chapter_data(book=book, chapter=chapter)
     chapter_html = get_chapter_html(book=book, chapter=chapter, version=version, chapter_info=chapter_info)
 
+    print("ready to send response.")
     return JsonResponse({"chapterInfo": chapter_info, "chapterText": chapter_html})
 
-def get_word_info(request, *args, **kwargs):
-    data = json.loads(request.body)
-    word = get_cleaned_alpha_text(data.get("word"))
-    verse = data.get("verse").replace("verse", "") # ie. verse14
-
-    chapter_info = get_chapter_bible_hub(book_name="john", chapter_num=3)
-
-    verse_info = chapter_info[verse]
-    word_info = get_word_info_from_verse(verse_info, word)
-
-    return JsonResponse({"result": "success", "word_info": word_info})
+#def get_word_info(request, *args, **kwargs):
+#    data = json.loads(request.body)
+#    word = get_cleaned_alpha_text(data.get("word"))
+#    verse = data.get("verse").replace("verse", "") # ie. verse14
+#
+#    chapter_info = get_chapter_bible_hub(book_name="john", chapter_num=3)
+#
+#    verse_info = chapter_info[verse]
+#    word_info = get_word_info_from_verse(verse_info, word)
+#
+#    return JsonResponse({"result": "success", "word_info": word_info})

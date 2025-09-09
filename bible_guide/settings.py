@@ -9,29 +9,13 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+DEBUG = True
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 import os
-import logging
-
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-        },
-    },
-    "root": {
-        "handlers": ["console"],
-        "level": "DEBUG",
-    },
-}
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -54,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'guide'
 ]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -223,19 +208,5 @@ OT_MAPPING_PKL_PATH = "OT_mapping.pkl"
 NT_MAPPING_PKL_PATH = "NT_mapping.pkl"
 
 import pickle
-
-try:
-    with open(OT_MAPPING_PKL_PATH, 'rb') as otmf:
-        OT_MAPPING = pickle.load(otmf)
-    with open(OT_STRONG_PKL_PATH, 'rb') as otdf:
-        OT_STRONG_DATA = pickle.load(otdf)
-    with open(NT_MAPPING_PKL_PATH, 'rb') as ntmf:
-        NT_MAPPING = pickle.load(ntmf)
-    with open(NT_STRONG_PKL_PATH, 'rb') as ntdf:
-        NT_STRONG_DATA = pickle.load(ntdf)
-except FileNotFoundError as e:
-    print(e)
-    print("Bible mapping or strong data file missing. Continuing...")
-    OT_MAPPING, OT_STRONG_DATA, NT_MAPPING, NT_STRONG_DATA = None, None, None, None
 
 from local_settings import *

@@ -3,6 +3,10 @@ import json
 from bs4 import BeautifulSoup, NavigableString
 from pprint import pprint
 import re
+from tqdm import tqdm
+from bible_guide.settings import BIBLE_BOOKS, OT_MAPPING_PKL_PATH, OT_STRONG_PKL_PATH, NT_MAPPING_PKL_PATH, NT_STRONG_PKL_PATH
+import pickle
+
 def get_cleaned_alpha_text(text):
     allowed_chars = "abcdefghijklmnopqrstuvwxyz0123456789 "
     return "".join(t for t in text.lower() if t in allowed_chars)
@@ -11,7 +15,7 @@ def get_text_biblegateway(book, chapter, version):
     url = f"https://www.biblegateway.com/passage/?search={book.replace(" ", "+")}%20{chapter}&version={version}"
     response = requests.get(url)
     response.encoding = "utf-8"
-    response_text = response.text
+    response_text = response.text.replace("—", " ")
 
     soup = BeautifulSoup(response_text, "html.parser")
     chapter_contents = soup.find('div', class_="result-text-style-normal")
@@ -168,9 +172,158 @@ def get_chapter_bible_hub(response_html):
 
     return result
 
+def get_bible_book_index(book_name):
+    lowercase_books = [ b[0].lower() for b in BIBLE_BOOKS ]
+    return lowercase_books.index(book_name) + 1
+
+#    with open(NT_MAPPING_PKL_PATH, 'rb') as ntmf:
+#        NT_MAPPING = pickle.load(ntmf)
+#    with open(NT_STRONG_PKL_PATH, 'rb') as ntdf:
+#        NT_STRONG_DATA = pickle.load(ntdf)
+
+"""
+word_info = {
+    "strong_num": strong_num,
+    "strong_text": strong_text[strong_text.index(":") + 2:], # everything after : in Strongs Greek 1234: ...
+    "original_language": original_language,
+    "language_type": language,
+    "english": get_cleaned_alpha_text(english_literal.replace("\xa0", " "))
+}
+"""
+
+def get_ot_strongs_text(data):
+    strong_data = data['strongs']
+
+    if strong_data.get('meaning'):
+        if strong_data['meaning'].get('def'):
+            meaning_def = strong_data['meaning']['def']
+        else:
+            meaning_def = ""
+
+        if strong_data['meaning'].get("#text"):
+            meaning = strong_data['meaning']['#text']
+        else:
+            meaning = ""
+    else:
+        meaning_def = ""
+        meaning = ""
+
+    if strong_data.get('usage'):
+        usage = strong_data.get('usage')
+    else:
+        usage = ""
+
+    strong_text = strong_data.get('#text', "") 
+
+    bdb_data = data['bdb']
+    if bdb_data:
+        bdb_text = bdb_data['#text']
+    else:
+        bdb_text = ""
+
+    return f'{meaning_def}: {meaning} | {usage} | {strong_text} BDB: {bdb_text}'
+
+
+def get_formatted_ot_data(data):
+    strong_num = data["strongs"]["@id"]
+
+    bdb_text = None
+    if data['bdb']:
+        bdb_text = data['bdb']['#text']
+   
+    description = get_ot_strongs_text(data)
+
+    strong_usage = data['strongs']['usage']
+    if type(strong_usage) == str:
+        strong_usage = [strong_usage]
+    
+    if type(strong_usage) == dict:
+        if type(strong_usage['w']) == list:
+            strong_usage = [strong_usage['w'][0]['#text']]
+        else:
+            strong_usage = [strong_usage['w']['#text']]
+
+    ref_strong_usage = []
+    if data["strongs"].get('reference_words'):
+        ref_strong_usage = data["strongs"]["reference_words"][0]["usage"]
+   
+        if type(strong_usage) == str:
+            strong_usage = [strong_usage]
+ 
+        if type(ref_strong_usage) == dict:
+            if type(ref_strong_usage['w']) == list:
+                ref_strong_usage = [ref_strong_usage['w'][0]['#text']]
+            else:
+                ref_strong_usage = [ref_strong_usage['w']['#text']]
+    # format later
+
+    original_language = data['strongs']['w']['#text']
+    language_type = "hebrew"
+
+    if not data['strongs'].get('meaning'):
+        english = data['strongs']['reference_words'][0]['meaning']['def']
+    else:
+        english = data['strongs']['meaning']['def']
+
+    if type(english) == str:
+        english = [english]
+
+    return {
+        "strong_num": strong_num,
+        "description": description,
+        "bdb_text": bdb_text,
+        "original_language": original_language,
+        "language_type": language_type,
+        "english": english,
+        "strongs_options": data['strongs_options'],
+        "strongs_usage": strong_usage,
+        "ref_strongs_usage": ref_strong_usage,
+        "bdb_options": data['bdb_options'],
+
+        # turn this on for debuggingb
+        #"old_strong_data": data['strongs'],
+    }
+
+def get_ot_chapter_data(book_index, chapter):
+    with open(OT_MAPPING_PKL_PATH, 'rb') as otmf:
+        OT_MAPPING = pickle.load(otmf)
+    with open(OT_STRONG_PKL_PATH, 'rb') as otdf:
+        OT_STRONG_DATA = pickle.load(otdf)
+
+    book_mapping = OT_MAPPING[str(book_index)]
+    chapter_mapping = book_mapping[chapter]
+
+    result = {}
+
+    for verse_number, verse_data in chapter_mapping.items():
+        verse_result = []
+        strongs_nums = verse_data['strongs']
+        
+        for strong_num in strongs_nums:
+            #try:
+            ot_data = OT_STRONG_DATA.get(strong_num)
+            if not ot_data:
+                continue
+            verse_result.append(get_formatted_ot_data(ot_data))
+            #except KeyError:
+            #    continunpute
+
+        result[verse_number] = verse_result
+    return result
+
+def get_nt_chapter_data(book_index, chapter):
+    pass
+
+def get_chapter_data(book, chapter):
+    bible_book_index = get_bible_book_index(book)
+
+    if bible_book_index < 40:
+        return get_ot_chapter_data(bible_book_index, chapter)
+    else:
+        return get_nt_chapter_data(bible_book_index, chapter)
+
 def wrap_each_word_in_span(text, verse_data, verse_number):
     words = text.split(" ")
-
     result = f'<span class="verse-number">{verse_number}</span>'
 
     for word in words:
@@ -203,77 +356,125 @@ def get_chapter_html(book, chapter, version, chapter_info):
 
     return verses_content
 
-def get_word_info_from_verse(verse_info, _word):
-    word = get_cleaned_alpha_text(_word)
+def get_candidates(items, word, key, exact_match=True):
     candidates = []
-    candidate_numbers = []
 
-    for word_info in verse_info:
-        if word in word_info["english"]:
-            candidates.append(word_info)
-            candidate_numbers.append(word_info["strong_num"])
+    for item in items:
 
-    if len(set(candidate_numbers)) == 0:
-        word_ends = [
-            "ites",
-            "ing",
-            "er",
-            "ed",
-            "an",
-            "ful",
-            "lty",
-            "less",
-            "ly",
-            "e",
-            "s",
-            "y"
-        ]
+        item_data = item[key]
+        if type(item_data) != list:
+            item_data = [item_data]
 
-        shortened_word = word
-        shortened_candidates = []
+        for english_option in item_data:
+            cleaned = get_cleaned_alpha_text(english_option)
+            if exact_match == True:
+                if word == cleaned:
+                    candidates.append(item)
+                    break
+            else:
+                if word in cleaned:
+                    candidates.append(item)
+                    break
 
-        for we in word_ends:
-            shortened_word = shortened_word.removesuffix(we)
+    return candidates
 
-        for word_info in verse_info:
-            if shortened_word in word_info["english"]:
-                shortened_candidates.append(word_info)
+def get_candidates_shortened(items, word, key, exact_match):
+    word_ends = [
+        "ment",
+        "ites",
+        "ing",
+        "er",
+        "ed",
+        "an",
+        "ful",
+        "lty",
+        "less",
+        "ly",
+        "e",
+        "s",
+        "y"
+    ]
+
+    shortened_candidates = []
+
+    for word_end in word_ends:
+        shortened_word = word.removesuffix(word_end)
+        candidates = get_candidates(items, shortened_word, key, exact_match)
+        shortened_candidates = shortened_candidates + candidates
+
+    return shortened_candidates
+
+def get_word_info_with_retry_exact(verse_info, word, key):
+    word_info = get_word_info(verse_info, word, key, exact_match=True)
+
+    if not word_info:
+        return get_word_info(verse_info, word, key, exact_match=False)
+
+    return word_info
+
+def get_word_info(verse_info, word, key, exact_match=True):
+    candidates = get_candidates(verse_info, word, key, exact_match=exact_match)
+
+    if len(candidates) == 1:
+        return candidates
+
+    elif len(candidates) == 0:
+        shortened_candidates = get_candidates_shortened(verse_info, word, key, exact_match=exact_match)
 
         if len(shortened_candidates) == 1:
-            return shortened_candidates[0]
+            return shortened_candidates
+    
+        if len(shortened_candidates) > 1:
+            return ("MULTIPLE CANDIDATES", shortened_candidates)
 
-        
-        # if the word isn't found by the english version alone, check the definition
-        definition_candidates = []
+        else:
+            return None
+    
+    return ("MULTIPLE CANDIDATES", candidates)
 
-        for word_info in verse_info:
-            if word in get_cleaned_alpha_text(word_info["strong_text"]):
-                definition_candidates.append(word_info)
+def get_word_info_from_verse(verse_info, _word):
+    word = get_cleaned_alpha_text(_word)
+ 
+    english_word_info = get_word_info(verse_info, word, "english")
 
-        if len(definition_candidates) == 1:
-            return definition_candidates[0]
+    if english_word_info:
+        if english_word_info[0] == "MULTIPLE CANDIDATES":
+            return None
+        return english_word_info[0]
 
-        short_definition_candidates = []
+    strongs_usage_info = get_word_info_with_retry_exact(verse_info, word, "strongs_usage")
 
-        for word_info in verse_info:
-            if shortened_word in get_cleaned_alpha_text(word_info["strong_text"]):
-                short_definition_candidates.append(word_info)
-        
-        if len(short_definition_candidates) == 1:
-            return short_definition_candidates[0]
 
-        return None
+    if strongs_usage_info:
+        if strongs_usage_info[0] == "MULTIPLE CANDIDATES":
+            return None
+        return strongs_usage_info[0]   
 
-    if len(set(candidate_numbers)) == 1:
-        return candidates[0]
+    strongs_ref_usage_info = get_word_info_with_retry_exact(verse_info, word, "ref_strongs_usage")
 
-    else: # more than one candidate
-        new_candidates = []
-        
-        for c in candidates:
-            if word == c["english"]:
-                new_candidates.append(c)
-        
-        if len(new_candidates) == 1:
-            return new_candidates[0]
-        return None
+    if strongs_ref_usage_info:
+        if strongs_ref_usage_info[0] == "MULTIPLE CANDIDATES":
+            return None
+        return strongs_ref_usage_info[0]
+
+    strongs_word_info = get_word_info(verse_info, word, "strongs_options")
+    if strongs_word_info:
+        if strongs_word_info[0] == "MULTIPLE CANDIDATES":
+            return None
+        return strongs_word_info[0]
+
+    bdb_word_info = get_word_info_with_retry_exact(verse_info, word, "bdb_options")
+    if bdb_word_info:
+        if bdb_word_info[0] == "MULTIPLE CANDIDATES":
+            return None
+
+        return bdb_word_info[0] # will return none if nothing
+    
+    # last chance with overall strong text
+    strong_text_word_info = get_word_info_with_retry_exact(verse_info, word, "description")
+    if strong_text_word_info:
+        if strong_text_word_info[0] == "MULTIPLE CANDIDATES":
+            return None
+
+        return strong_text_word_info[0] # will return none if nothing
+       

@@ -22,53 +22,32 @@ function getBibleVersion() {
 
 function collectChapterInfo() {
   
-  // get bible hub html and send to the back end for parsing
-  // we do this so the server doesn't get ip banned lol
-  let bibleHubUrl = `https://biblehub.com/interlinear/${BOOKNAME.replace(" ", "_")}/${CHAPTERNUMBER}.htm`;
-
-  const CORS_OPTIONS = [
-    //"https://cors-proxy.htmldriven.com/?url=",
-    "https://corsproxy.io/?url=",
-    'https://api.allorigins.win/raw?url=',
-    'https://api.codetabs.com/v1/proxy?quest=',
-    'https://api.cors.lol/?url='
-  ];
-
-  const corsServer = CORS_OPTIONS[Math.floor(Math.random() * CORS_OPTIONS.length)];
-  const corsurl = corsServer + bibleHubUrl;
-  // this is hopefully so we don't get ip banned haha
-  
-  fetch(corsurl).then(response => response.text()).then(html => {
-    fetch("/get_chapter_info/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": CSRFTOKEN
-        },
-        body: JSON.stringify({
-          book: BOOKNAME,
-          chapter: CHAPTERNUMBER,
-          html: html,
-          version: getBibleVersion()
-        })
+  fetch("/get_chapter_info/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": CSRFTOKEN
+      },
+      body: JSON.stringify({
+        book: BOOKNAME,
+        chapter: CHAPTERNUMBER,
+        version: getBibleVersion()
       })
-      .then (res => res.json())
-      .then(data => {
-        chapterInfo = data.chapterInfo;
-        chapterText = data.chapterText;
+    })
+    .then (res => res.json())
+    .then(data => {
+      chapterInfo = data.chapterInfo;
+      chapterText = data.chapterText;
 
-        const loadingContainer = document.getElementById("loader-container");
-        loadingContainer.style.display = "none";
+      const loadingContainer = document.getElementById("loader-container");
+      loadingContainer.style.display = "none";
 
-        console.log(data);
-        run()
-      })
-      .catch(err => {
-        console.error("error:", err)
-      })
-    
-  })
-
+      console.log(data);
+      run()
+    })
+    .catch(err => {
+      console.error("error:", err)
+    })
  }
 
 function populateBookAndChapter() {
@@ -127,7 +106,7 @@ function run() {
       let wordInfo = getWordInfo(verse, strongNum);
 
       let debugInfo = `
-        <div>English: <b>${wordInfo.english}</b></div><div><span>Original Language: </span><span class="originallanguage">${wordInfo.original_language}</span><span class="strongnum"><a href="https://biblehub.com/${wordInfo.language_type}/${wordInfo.strong_num}.htm" target="_blank">(${wordInfo.strong_num})</a></span></div><div class="strongtext">${wordInfo.strong_text}</div>`
+        <div>English: <b>${wordInfo.english}</b></div><div><span>Original Language: </span><span class="originallanguage">${wordInfo.original_language}</span><span class="strongnum"><a href="https://biblehub.com/${wordInfo.language_type}/${wordInfo.strong_num}.htm" target="_blank">(${wordInfo.strong_num})</a></span></div><div class="strongtext">${wordInfo.description}</div>`
       debugText.innerHTML = debugInfo;
     }
   })

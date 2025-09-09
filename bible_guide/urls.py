@@ -18,10 +18,13 @@ from django.contrib import admin
 from django.urls import path
 from guide.views import *
 
+def broken(request, *args, **kwargs):
+    print("testing")
+    return 1/0
+
 urlpatterns = [
     path('', gen_one_redirect, name="gen_one_redirect"),
     path('admin/', admin.site.urls),
     path('guide/<str:book>/<str:chapter>/', guide_page, name="guide_page"),
-    path('get_word_info/', get_word_info, name="get_word_info"),
-    path('get_chapter_info/', get_chapter_info, name="get_chapter_info")
+    path('get_chapter_info/', get_chapter_info, name="get_chapter_info"),
 ]

@@ -1,6 +1,6 @@
 import os
 from django.core.management.base import BaseCommand, CommandError
-from bible_guide.settings import VERSIONS_DIR
+from bible_guide.settings import *
 import xmltodict
 from pprint import pprint
 from tqdm import tqdm
@@ -8,6 +8,7 @@ import pickle, csv
 import re
 
 class Command(BaseCommand):
+    pkl_file_paths = [OT_STRONG_PKL_PATH, NT_STRONG_PKL_PATH, OT_MAPPING_PKL_PATH, NT_MAPPING_PKL_PATH]
     
     def get_all_bdb_words(self, bdb_data):
 
@@ -15,8 +16,6 @@ class Command(BaseCommand):
 
         lexicon = bdb_data['lexicon'] # items sorted by letter
         for part in lexicon['part']:
-
-            # items grouped by first letter
 
             part_id = part['@id'] # 'a'
             part_title = part['@title'] # '@title': 'א'
@@ -30,31 +29,6 @@ class Command(BaseCommand):
                     if type(word) == str:
                         continue
                     words.append(word)
-                    
-                    #if type(word) == str:
-                    #    continue
-
-                    #bdb_id = word.get('@id')
-                    #hebrew_text_options = word['w']
-                    #bdb_name = word.get('def')
-
-                    #if word.get('#text'):
-                    #    bdb_definitions = [word['#text']]
-                    #else:
-                    #    # should be sense
-                    #    sense = word.get('sense')
-                    #    definitions = []
-                    #    for s in sense:
-
-
-
-                    #bdb_word = {
-                    #    'bdb_id': bdb_id,
-                    #    'bdb_hebrew_text_options': hebrew_text_options,
-                    #    'bdb_name': bdb_name,
-                    #    'bdb_definitions': bdb_definitions
-                    #}
-                    #words.append(bdb_word)
         return words
 
     def get_strong_word_hebrew_text(self, word):
@@ -128,20 +102,61 @@ class Command(BaseCommand):
         return None
 
     def get_bdb_strong_match(self, stext, s_word, bdb_words):
+
+        b_word = None
+
         for b_word in bdb_words:
             btext_options = self.get_bdb_word_hebrew_text(b_word)
 
-            #if b_word['@id'] == "a.ac.ae":
-            #    print(b_word)
-
             if stext in btext_options:
-                return {
-                    'bdb': b_word,
-                    'strongs': s_word
-                }
+                b_word = b_word
+                break
 
-        # still no match, check for 1 char off near match
-        return self.near_match_comparison(bdb_words, stext, s_word)
+        if not b_word:
+            b_word_match = self.near_match_comparison(bdb_words, stext, s_word)
+            if not b_word_match:
+                return None
+            b_word = b_word_match
+
+        return {
+            'bdb': b_word,
+            'strongs': s_word,
+            'bdb_options': self.get_bdb_english_options(b_word),
+            'strongs_options': self.get_strongs_english_options(s_word)
+        }
+
+    def get_strongs_english_options_base(self, strong_word):
+        if not strong_word.get('meaning'):
+            return self.get_strongs_english_options(strong_word['reference_words'][0])
+        
+        if type(strong_word['meaning']) == str:
+            return [strong_word['meaning']]
+
+        if not strong_word['meaning'].get('def'):
+            return self.get_strongs_english_options(strong_word['reference_words'][0])
+        
+        if type(strong_word['meaning']['def']) == str:
+            return [strong_word['meaning']['def']]
+        return strong_word['meaning']['def']
+
+    def get_strongs_english_options(self, strong_word):
+        base = self.get_strongs_english_options_base(strong_word)
+        # should be a list of strings, but each one may be 
+        
+        result = []
+
+        for item in base:
+            cleaned = re.sub(r"\([^\)]+\)", "", item)
+            result.append(cleaned)
+        return result
+
+
+    def get_bdb_english_options(self, bdb_word):
+        if not bdb_word.get('def'):
+            return []
+        if type(bdb_word['def']) == str:
+            return [bdb_word['def']]
+        return bdb_word['def']
 
     def add_bdb_to_strongs(self, strongs_words, bdb_words):
         result = {}
@@ -177,7 +192,9 @@ class Command(BaseCommand):
                 else:
                     result[s_id] = {
                         "bdb": None,
-                        "strongs": s_word
+                        "strongs": s_word,
+                        "strongs_options": self.get_strongs_english_options(s_word),
+                        "bdb_options": []
                     }
                     not_found_count += 1
 
@@ -188,14 +205,38 @@ class Command(BaseCommand):
             else:
                 result[s_id] = match
                 found_count += 1
-        
+
         print("finished matching bdb and strongs.")
         pprint({"not_found": not_found_count, "found": found_count})
+
+        # convert dict to array with index finding for speed
+        #for i in range()
         return result
+
+        # list version?
+        last_strong_num = int(list(result.keys())[-1].replace("H", ""))
+
+        list_result = []
+
+        for i in range(last_strong_num):
+            strong_key = f"H{i + 1}"
+            
+            item = result.get(strong_key)
+            
+            if item:
+                item["strong_num"] = strong_key
+                list_result.append(item)
+            else:
+                list_result.append(None)
+
+        return list_result
 
     def get_strong_words(self, strongs_data):
         strong_words = strongs_data["lexicon"]["entry"]
         sw_dict = {}
+
+        #! IMPORTANT
+        # All the 9000 strongs words are just punctuation and stuff so we can skip them safely.
 
         for sw in strong_words:
             sw_dict[sw['@id']] = sw
@@ -203,6 +244,12 @@ class Command(BaseCommand):
         result = []
 
         for sw in strong_words:
+
+            sw_num = int(sw['@id'].replace("H", ""))
+            if sw_num > 8999:
+                print(sw_num)
+                continue
+
             if sw.get("source") and type(sw.get("source")) != str:
                 if not sw.get("source").get("w"):
                     continue
@@ -233,7 +280,7 @@ class Command(BaseCommand):
 
     def get_or_create_merged_bdb_strongs(self):
 
-        pklfile_path = "OT_strong_data.pkl"
+        pklfile_path = OT_STRONG_PKL_PATH
 
         if os.path.exists(pklfile_path):
             with open(pklfile_path, 'rb') as pklfile:
@@ -257,9 +304,9 @@ class Command(BaseCommand):
 
         return merged_data
 
-    def get_or_create_strongs_mapping(self):
+    def get_or_create_ot_strongs_mapping(self):
 
-        pklfile_path = "OT_book_mapping.pkl"
+        pklfile_path = OT_MAPPING_PKL_PATH
 
         if os.path.exists(pklfile_path):
             with open(pklfile_path, 'rb') as pklfile:
@@ -284,6 +331,15 @@ class Command(BaseCommand):
             lexem_id = row[6]
             strong_num = row[7]
 
+            if "H" not in strong_num:
+                # other broken stuff
+                continue
+
+            # if this strong num is one of the 9000 ones, we skip it, punctuation or something
+            num_sn = int(strong_num.replace("H", ""))
+            if num_sn > 8999:
+                continue
+
             if not books.get(book_id):
                 books[book_id] = {}
 
@@ -293,11 +349,12 @@ class Command(BaseCommand):
             if not books[book_id][chapter_id].get(verse_id):
                 books[book_id][chapter_id][verse_id] = {
                     'strongs': [],
-                    'lexems': []
+                    'lexems': [],
                 }
             
-            books[book_id][chapter_id][verse_id]['strongs'].append(strong_num)
-            books[book_id][chapter_id][verse_id]['lexems'].append(lexem_id)
+            if strong_num not in books[book_id][chapter_id][verse_id]['strongs']:
+                books[book_id][chapter_id][verse_id]['strongs'].append(strong_num)
+                books[book_id][chapter_id][verse_id]['lexems'].append(lexem_id)
 
         with open (pklfile_path, 'wb') as pklfile:
             pickle.dump(books, pklfile)
@@ -305,17 +362,15 @@ class Command(BaseCommand):
         return books
 
     def populate_ot(self):
-        #〔H9003｜c1｜1｜E70001｜in〕〔H7225｜c1｜2｜E70002｜beginning〕〔H1254｜c1｜3｜E70003｜create〕〔H430｜c1｜4｜E70004｜god(s)〕〔H853｜c1｜5｜E70005｜[object marker]〕〔H9009｜c1｜6｜E70006｜the〕〔H8064｜c1｜7｜E70007｜heavens〕〔H9000｜c1｜8｜E70008｜and〕〔H853｜c1｜9｜E70005｜[object marker]〕〔H9009｜c1｜10｜E70006｜the〕〔H776｜c1｜11｜E70009｜earth〕
         print("getting or creating merged bdb strongs data")
         merged_data = self.get_or_create_merged_bdb_strongs()
-        print("Getting verse by verse mapping")
-        ot_mapping = self.get_or_create_strongs_mapping()
-        print(ot_mapping['1']['1']['1'])
+        print("Getting ot mapping")
+        ot_mapping = self.get_or_create_ot_strongs_mapping()
 
     def get_nt_strongs_data(self):
         csv_file_path = "openbib/greek_csvs/OpenGNT_DictOGNT.csv"
  
-        pklfile_path = "NT_strong_data.pkl"
+        pklfile_path = NT_STRONG_PKL_PATH
 
         if os.path.exists(pklfile_path):
             with open(pklfile_path, 'rb') as pklfile:
@@ -339,7 +394,7 @@ class Command(BaseCommand):
     def get_nt_strongs_mapping(self):
         mapping_file = "openbib/greek_csvs/OpenGNT_version3_3.csv"
 
-        pklfile_path = "NT_book_mapping.pkl"
+        pklfile_path = NT_MAPPING_PKL_PATH
 
         if os.path.exists(pklfile_path):
             with open(pklfile_path, 'rb') as pklfile:
@@ -380,9 +435,20 @@ class Command(BaseCommand):
         return books
 
     def populate_nt(self):
+        print("Getting NT strongs data")
         strongs_data = self.get_nt_strongs_data()
+        print("Getting NT strongs mapping")
         strongs_mapping = self.get_nt_strongs_mapping()
 
+    def add_arguments(self, parser):
+        parser.add_argument('-r', '--refresh', action="store_true")
+
     def handle(self, *args, **kwargs):
+    
+        if kwargs.get("refresh"):
+            for path in self.pkl_file_paths:
+                if os.path.exists(path):
+                    os.remove(path)
+
         self.populate_ot()
         self.populate_nt()
