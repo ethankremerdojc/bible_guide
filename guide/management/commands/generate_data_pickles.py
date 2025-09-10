@@ -367,6 +367,137 @@ class Command(BaseCommand):
         print("Getting ot mapping")
         ot_mapping = self.get_or_create_ot_strongs_mapping()
 
+    def zero_pad_strong_num(self, strong_num):
+
+        if len(strong_num) == 6:
+            return strong_num
+
+        strong_num_no_g = strong_num.replace("G", "")
+        if len(strong_num_no_g) == 6:
+            # too many 0s
+            strong_num_no_g = strong_num_no_g[1:]
+        
+        strong_only_num = strong_num_no_g
+
+        while True:
+            if len(strong_only_num) == 4:
+                break
+            if len(strong_num) > 4:
+                print(strong_num)
+                raise Exception("you dun frkd up")
+
+            strong_only_num = "0" + strong_only_num
+
+        return f"G{strong_only_num}0"
+
+    def parse_nt_md_text(self, text):
+
+        data = {}
+
+        # --- Top level word + heading ---
+        match = re.search(r"#\s+(.*)", text)
+        if match:
+            data["word"] = match.group(1).strip()
+
+        # --- Status comment ---
+        #status = re.search(r"<!--\s*Status:\s*(.*?)\s*-->", text)
+        #if status:
+        #    data["status"] = status.group(1).strip()
+
+        # --- Word data section ---
+        word_data_section = re.search(r"## Word data(.*?)(##|\Z)", text, re.S)
+        if word_data_section:
+            word_data_text = word_data_section.group(1)
+            word_data = {}
+            for line in word_data_text.splitlines():
+                line = line.strip("* ").strip()
+                if not line:
+                    continue
+                if ":" in line:
+                    key, val = line.split(":", 1)
+                    word_data[key.strip()] = val.strip()
+            data["word_data"] = word_data
+
+        # --- Etymology section ---
+        #ety_section = re.search(r"## Etymology:(.*?)(##|\Z)", text, re.S)
+        #if ety_section:
+        #    ety_text = ety_section.group(1).strip()
+        #    data["etymology"] = [line.strip("* ").strip() for line in ety_text.splitlines() if line.strip()]
+
+        # --- Senses section ---
+        senses = []
+        for sense_block in re.split(r"### Sense", text)[1:]:
+            sense_data = {}
+            sense_id = re.match(r"\s*([\d.]+):", sense_block)
+            if sense_id:
+                sense_data["id"] = sense_id.group(1)
+
+            # definition
+            defn = re.search(r"#### Definition:\s*(.*?)(####|\Z)", sense_block, re.S)
+            if defn:
+                sense_data["definition"] = defn.group(1).strip()
+
+            # glosses
+            glosses = re.search(r"#### Glosses:\s*(.*?)(####|\Z)", sense_block, re.S)
+            if glosses:
+                sense_data["glosses"] = glosses.group(1).strip()
+
+            # citations
+            cits = re.search(r"#### Citations:\s*(.*?)(####|\Z)", sense_block, re.S)
+            if cits:
+                initial_citations = [c.strip() for c in cits.group(1).split(";") if c.strip()]
+                
+                sense_data["citations"] = []
+                
+                for c in initial_citations:
+                    if "\n" in c:
+                        sense_data["citations"].append(c.split("\n")[1])
+                    else:
+                        sense_data["citations"].append(c)
+
+            senses.append(sense_data)
+        if senses:
+            data["senses"] = senses
+
+        return data
+
+    def parse_ognt_text(self, text):
+        pattern = re.compile(
+            r"<b><n>(.*?)</n></b>\s*\[<n>(.*?)</n>\](.*)", 
+            re.DOTALL
+        )
+
+        match = pattern.search(text)
+        first_greek = match.group(1)
+        n_tag = match.group(2)
+        rest = match.group(3).strip()
+        
+        result = {
+            "greek": first_greek,
+            "lex": n_tag,
+            "description": rest
+        }
+        pprint(result)
+        input()
+        return result
+
+
+    def get_en_ugl_data(self, strong_num):
+        # need to 0 pad strong num
+        # so G23 becomes G00023
+        padded_strong_num = self.zero_pad_strong_num(strong_num)
+
+        en_ugl_content_dir = "openbib/en_ugl/content/"
+        file_dir = en_ugl_content_dir + padded_strong_num
+        content_file_path = file_dir + "/01.md"
+        
+        if not os.path.exists(content_file_path):
+            return None
+        
+        with open(content_file_path, "r") as content_file:
+            contents = content_file.read()
+            return self.parse_nt_md_text(contents)
+
     def get_nt_strongs_data(self):
         csv_file_path = "openbib/greek_csvs/OpenGNT_DictOGNT.csv"
  
@@ -378,13 +509,36 @@ class Command(BaseCommand):
 
         strong_words = {}
 
+        en_ugl_found = 0
+        en_ugl_not_found = 0
+
         with open(csv_file_path) as csvfile:
             reader = csv.reader(csvfile, delimiter='\t')
 
             for row in reader:
                 strong_num = row[0]
                 info_data = row[1]
-                strong_words[strong_num] = info_data
+                en_ugl_data = self.get_en_ugl_data(strong_num)
+
+
+                #if en_ugl_data:
+                #    en_ugl_found += 1
+                #else:
+                #    en_ugl_not_found += 1
+
+                ognt_data = self.parse_ognt_text(info_data)
+                
+                obj = {
+                    "strong_num": strong_num,
+                    "OGNT": ognt_data,
+                    "en_ugl": en_ugl_data
+                }
+                strong_words[strong_num] = obj
+        
+        print({
+            "found": en_ugl_found,
+            "not found": en_ugl_not_found
+        })
 
         with open(pklfile_path, 'wb') as pklfile:
             pickle.dump(strong_words, pklfile)

@@ -291,9 +291,27 @@ def get_formatted_ot_data(data):
         "strongs_usage": strong_usage,
         "ref_strongs_usage": ref_strong_usage,
         "bdb_options": data['bdb_options'],
+    }
+#TODO do not use bs4, use regex
+def get_formatted_nt_data(data, strong_num):
+    soup = BeautifulSoup(data, 'html.parser')
+    first_greek_text = soup.find("n").text
+    lexical_info = soup.find_all("n")[1].text
+    
+    soup_copy = BeautifulSoup(data, "html.parser")
 
-        # turn this on for debuggingb
-        #"old_strong_data": data['strongs'],
+    # remove the first <b><n>…</n></b> and the second <n>
+    soup_copy.find("n").decompose()
+    soup_copy.find("n").decompose()
+
+    rest = soup_copy.get_text(" ", strip=True)
+
+    return {
+        "strong_num": strong_num,
+        "description": rest,
+        "original_language": first_greek_text,
+        "language_type": "greek",
+        "english": "UNSET",
     }
 
 def get_ot_chapter_data(book_index, chapter):
@@ -312,19 +330,40 @@ def get_ot_chapter_data(book_index, chapter):
         strongs_nums = verse_data['strongs']
         
         for strong_num in strongs_nums:
-            #try:
             ot_data = OT_STRONG_DATA.get(strong_num)
             if not ot_data:
                 continue
             verse_result.append(get_formatted_ot_data(ot_data))
-            #except KeyError:
-            #    continunpute
 
         result[verse_number] = verse_result
     return result
 
 def get_nt_chapter_data(book_index, chapter):
-    raise NotImplementedError
+    with open(NT_MAPPING_PKL_PATH, 'rb') as ntmf:
+        NT_MAPPING = pickle.load(ntmf)
+    with open(NT_STRONG_PKL_PATH, 'rb') as ntdf:
+        NT_STRONG_DATA = pickle.load(ntdf)
+
+    book_mapping = NT_MAPPING[str(book_index)]
+    chapter_mapping = book_mapping[chapter]
+
+    result = {}
+
+    for verse_number, verse_data in chapter_mapping.items():
+        verse_result = []
+        strongs_nums = verse_data['strongs']
+        
+        for strong_num in strongs_nums:
+            nt_data = NT_STRONG_DATA.get(strong_num)
+            if not nt_data:
+                continue
+            verse_result.append(get_formatted_nt_data(nt_data, strong_num))
+
+        result[verse_number] = verse_result
+    return result
+
+
+
 
 def get_chapter_data(book, chapter):
     bible_book_index = get_bible_book_index(book)
@@ -334,13 +373,13 @@ def get_chapter_data(book, chapter):
     else:
         return get_nt_chapter_data(bible_book_index, chapter)
 
-def wrap_each_word_in_span(text, verse_data, verse_number):
+def wrap_each_word_in_span(text, verse_data, verse_number, is_ot):
     words = text.split(" ")
     result = f'<span class="verse-number">{verse_number}</span>'
 
     for word in words:
         strong_num = ""
-        word_info = get_word_info_from_verse(verse_data, word)
+        word_info = get_word_info_from_verse(verse_data, word, is_ot)
         if word_info:
             strong_num = word_info["strong_num"]
 
@@ -352,6 +391,9 @@ def wrap_each_word_in_span(text, verse_data, verse_number):
 def get_chapter_html(book, chapter, version, chapter_info):
     verses, headings = get_text_biblegateway(book, chapter, version)
     verses_content = ""
+    
+    bible_book_index = get_bible_book_index(book)   
+    is_ot = bible_book_index < 40
 
     for verse_num, verse in verses:
 
@@ -361,7 +403,7 @@ def get_chapter_html(book, chapter, version, chapter_info):
 
         verse_num_text = f"verse{verse_num}"
 
-        verse_words_wrapped = wrap_each_word_in_span(verse, chapter_info[str(verse_num)], verse_num)
+        verse_words_wrapped = wrap_each_word_in_span(verse, chapter_info[str(verse_num)], verse_num, is_ot)
 
         verse_span = f'<span class="verse" id="{verse_num_text}">{verse_words_wrapped}</span>'
         verses_content += verse_span
@@ -444,49 +486,32 @@ def get_word_info(verse_info, word, key, exact_match=True):
     
     return ("MULTIPLE CANDIDATES", candidates)
 
-def get_word_info_from_verse(verse_info, _word):
+def get_word_info_from_verse(verse_info, _word, is_ot):
+
+
     word = get_cleaned_alpha_text(_word)
  
-    english_word_info = get_word_info(verse_info, word, "english")
+    if is_ot:
+        keys_to_check = [
+            "english"
+            "strongs_usage",
+            "ref_strongs_usage",
+            "strongs_options",
+            "bdb_options",
+            "description"
+        ]
+    else:
+        keys_to_check = [
+            "description"
+        ]
 
-    if english_word_info:
-        if english_word_info[0] == "MULTIPLE CANDIDATES":
-            return None
-        return english_word_info[0]
+    for key in keys_to_check:
+        word_info = get_word_info_with_retry_exact(verse_info, word, "english")
+        if word_info:
+            if word_info[0] == "MULTIPLE CANDIDATES":
+                if not is_ot:
+                    print("multiple")
+                return None
+            return english_word_info[0]
 
-    strongs_usage_info = get_word_info_with_retry_exact(verse_info, word, "strongs_usage")
-
-
-    if strongs_usage_info:
-        if strongs_usage_info[0] == "MULTIPLE CANDIDATES":
-            return None
-        return strongs_usage_info[0]   
-
-    strongs_ref_usage_info = get_word_info_with_retry_exact(verse_info, word, "ref_strongs_usage")
-
-    if strongs_ref_usage_info:
-        if strongs_ref_usage_info[0] == "MULTIPLE CANDIDATES":
-            return None
-        return strongs_ref_usage_info[0]
-
-    strongs_word_info = get_word_info(verse_info, word, "strongs_options")
-    if strongs_word_info:
-        if strongs_word_info[0] == "MULTIPLE CANDIDATES":
-            return None
-        return strongs_word_info[0]
-
-    bdb_word_info = get_word_info_with_retry_exact(verse_info, word, "bdb_options")
-    if bdb_word_info:
-        if bdb_word_info[0] == "MULTIPLE CANDIDATES":
-            return None
-
-        return bdb_word_info[0] # will return none if nothing
-    
-    # last chance with overall strong text
-    strong_text_word_info = get_word_info_with_retry_exact(verse_info, word, "description")
-    if strong_text_word_info:
-        if strong_text_word_info[0] == "MULTIPLE CANDIDATES":
-            return None
-
-        return strong_text_word_info[0] # will return none if nothing
-       
+    return None
