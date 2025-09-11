@@ -461,26 +461,66 @@ class Command(BaseCommand):
 
         return data
 
-    def parse_ognt_text(self, text):
-        pattern = re.compile(
-            r"<b><n>(.*?)</n></b>\s*\[<n>(.*?)</n>\](.*)", 
-            re.DOTALL
-        )
-
-        match = pattern.search(text)
-        first_greek = match.group(1)
-        n_tag = match.group(2)
-        rest = match.group(3).strip()
+    def convert_reference_to_link(self, reference):
+        # ex: ref://42.14.32
         
-        result = {
-            "greek": first_greek,
-            "lex": n_tag,
-            "description": rest
-        }
-        pprint(result)
-        input()
-        return result
+        parts = reference.split(".")
+        book = parts[0].replace("ref://", "")
+        chapter = parts[1]
+        
+        book_name = get_book_name_for_index(book)
+        print(book_name)
+        print()
+        return f"/guide/{book_name}/{chapter}/"
 
+    def parse_ognt_text(self, text):
+        try:
+            pattern = re.compile(
+                r"<b><n>(.*?)</n></b>\s*\[<n>(.*?)</n>\](.*)", 
+                re.DOTALL
+            )
+
+            match = pattern.search(text)
+            greek = match.group(1)
+            lex = match.group(2)
+            rest = match.group(3).strip()
+        except AttributeError:
+            items = text.split("｜")
+
+            greek = items[0].replace("<grk>", "").replace("</grk>", "")
+            lex = items[1].replace("<grk>", "").replace("</grk>", "")
+
+            if len(items) == 4:
+                rest = items[2] + items[3]
+            else:
+                rest = items[2]
+
+        desc_content = rest
+        ref_pat = r"<n>[^<]*Ref[^<]*</n>"
+        match = re.search(ref_pat, desc_content)
+        if match:
+            match_text = match.group(0)
+            desc_content = desc_content.split(match_text)[0]
+
+        whole_description = rest
+        weird_p_stuff_patt = r"<p>.*</p>"
+        p_match = re.search(weird_p_stuff_patt, rest)
+        if p_match:
+            whole_description = re.sub(weird_p_stuff_patt, "", whole_description)
+
+        reference_pat = r'(ref://\d+\.\d+\.\d+[^\"\']*)[\"\']'
+        matches = re.findall(reference_pat, whole_description)
+        for m in matches:
+            whole_description = whole_description.replace(m, self.convert_reference_to_link(m))
+
+        result = {
+            "greek":greek,
+            "lex": lex,
+            "description": desc_content,
+            "whole_description": whole_description,
+            "unedited_description": rest
+        }
+        return result
 
     def get_en_ugl_data(self, strong_num):
         # need to 0 pad strong num
@@ -520,12 +560,6 @@ class Command(BaseCommand):
                 info_data = row[1]
                 en_ugl_data = self.get_en_ugl_data(strong_num)
 
-
-                #if en_ugl_data:
-                #    en_ugl_found += 1
-                #else:
-                #    en_ugl_not_found += 1
-
                 ognt_data = self.parse_ognt_text(info_data)
                 
                 obj = {
@@ -534,11 +568,6 @@ class Command(BaseCommand):
                     "en_ugl": en_ugl_data
                 }
                 strong_words[strong_num] = obj
-        
-        print({
-            "found": en_ugl_found,
-            "not found": en_ugl_not_found
-        })
 
         with open(pklfile_path, 'wb') as pklfile:
             pickle.dump(strong_words, pklfile)
@@ -579,9 +608,10 @@ class Command(BaseCommand):
                     'strongs': [],
                     'lexems': []
                 }
-            
-            books[book_id][chapter_id][verse_id]['strongs'].append(strong_num)
-            books[book_id][chapter_id][verse_id]['lexems'].append(lexem_id)
+
+            if strong_num not in books[book_id][chapter_id][verse_id]['strongs']:
+                books[book_id][chapter_id][verse_id]['strongs'].append(strong_num)
+                books[book_id][chapter_id][verse_id]['lexems'].append(lexem_id)
 
         with open (pklfile_path, 'wb') as pklfile:
             pickle.dump(books, pklfile)

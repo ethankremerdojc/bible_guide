@@ -202,6 +202,14 @@ BIBLE_BOOKS = [
     ("Jude", 1),
     ("Revelation", 22)
 ]
+
+def get_bible_book_index(book_name):
+    lowercase_books = [ b[0].lower() for b in BIBLE_BOOKS ]
+    return lowercase_books.index(book_name) + 1
+
+def get_book_name_for_index(book_index):
+    return BIBLE_BOOKS[int(book_index) - 1][0]
+
 OT_STRONG_PKL_PATH = "OT_strong_data.pkl"
 NT_STRONG_PKL_PATH = "NT_strong_data.pkl"
 OT_MAPPING_PKL_PATH = "OT_mapping.pkl"

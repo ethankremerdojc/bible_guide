@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup, NavigableString
 from pprint import pprint
 import re
 from tqdm import tqdm
-from bible_guide.settings import BIBLE_BOOKS, OT_MAPPING_PKL_PATH, OT_STRONG_PKL_PATH, NT_MAPPING_PKL_PATH, NT_STRONG_PKL_PATH
+from bible_guide.settings import *
 import pickle
 
 def get_cleaned_alpha_text(text):
@@ -172,9 +172,7 @@ def get_chapter_bible_hub(response_html):
 
     return result
 
-def get_bible_book_index(book_name):
-    lowercase_books = [ b[0].lower() for b in BIBLE_BOOKS ]
-    return lowercase_books.index(book_name) + 1
+
 
 def get_ot_strongs_text(data):
     strong_data = data['strongs']
@@ -194,8 +192,8 @@ def get_ot_strongs_text(data):
             meaning = ""
 
 
-        if ";" in meaning:
-            meaning = meaning.replace(";", meaning_def)
+        if "," in meaning:
+            meaning = meaning.replace(",", f"<b>{meaning_def}</b>")
             meaning_def = ""
 
     else:
@@ -212,33 +210,76 @@ def get_ot_strongs_text(data):
     bdb_data = data['bdb']
 
     bdb_usages = ""
+    bdb_text = ""
+
+    def get_sense_text(sense):
+        result = ""
+
+
+        if type(sense) == str:
+            return sense
+        if not sense.get('sense'):
+            sense_text = sense.get('#text')
+
+            sense_words = sense.get('def')
+            if type(sense_words) == str:
+                sense_words = [sense_words]
+            if not sense_words:
+                sense_text = sense.get("#text")
+            else:
+ 
+                if not sense_text:
+                    sense_text = ", ".join(sense_words)
+                else:
+                   for sw in sense_words:
+                        if "," in sense_text:
+                            sense_text = sense_text.replace(",", sw, 1)
+                        else:
+                            sense_text = sense_text.replace(". ", sw, 1)
+            
+            if sense_text is None:
+                sense_text = ""
+
+            if sense.get('@n'):
+                result += sense['@n'] + ". " + sense_text + "<br/>"
+            else:
+                result += sense_text + "<br/>"
+        else:
+            if sense.get('stem'):
+                result += f"<b>{sense['stem']}</b><br/>"
+
+            for sub_sense in sense['sense']:
+                result += get_sense_text(sub_sense)
+
+        return result
 
     if bdb_data:
-        bdb_text = bdb_data['#text']
+        if not bdb_data.get('def'):
+            if bdb_data.get('em'):
+                bdb_text += bdb_data['#text'].replace(",", bdb_data['em']) + "<br/>"
+            else:
+                bdb_text += bdb_data['#text']
+        else:
+            if type(bdb_data['def']) == list:
+                bdb_usages = ", ".join(bdb_data['def'])
+            else:
+                bdb_usages = bdb_data['def']
 
-        bdb_def = data['bdb'].get('def')
-        if bdb_def:
-            bdb_usages = ", ".join(bdb_def)
+        bdb_text += get_sense_text(bdb_data)
+
     else:
         bdb_text = ""
-   
+ 
+    #if data['strongs']['@id'] == "H1568":
+    #    pprint(data['bdb'])
 
     result = f'<b>Meaning:</b><p>{meaning_def} {meaning}</p><br/><br/><b>Usages:</b><p>{usage}</p><p>{strong_text}</p><b>BDB:</b><p>{bdb_usages}</p><p>{bdb_text}</p>'
     
-    #if data.get("bdb"):
-    #    print(result)
-    #    pprint(data)
-    #    input()
-
     return result
 
 def get_formatted_ot_data(data):
     strong_num = data["strongs"]["@id"]
 
-    bdb_text = None
-    if data['bdb']:
-        bdb_text = data['bdb']['#text']
-   
     description = get_ot_strongs_text(data)
 
     strong_usage = data['strongs']['usage']
@@ -283,7 +324,6 @@ def get_formatted_ot_data(data):
     return {
         "strong_num": strong_num,
         "description": description,
-        "bdb_text": bdb_text,
         "original_language": original_language,
         "language_type": language_type,
         "english": english,
@@ -292,26 +332,103 @@ def get_formatted_ot_data(data):
         "ref_strongs_usage": ref_strong_usage,
         "bdb_options": data['bdb_options'],
     }
-#TODO do not use bs4, use regex
-def get_formatted_nt_data(data, strong_num):
-    soup = BeautifulSoup(data, 'html.parser')
-    first_greek_text = soup.find("n").text
-    lexical_info = soup.find_all("n")[1].text
+
+def get_english_options_from_senses(senses):
+    result = []
+
+    for sense in senses:
+        citations = sense['citations']
+
+        for citation in citations:
+            patterns = [
+                r"\[[^\]]*\]",
+                r"\([^\)]*\)",
+                r"\{[^})]*\}",
+                r"[a-z,A-Z]*\.[\s,\,]",
+            ]
+
+            cit = citation
+
+            for pat in patterns:
+                cit = re.sub(pat, "", cit)
+
+            cleaned = get_cleaned_alpha_text(cit).strip()
+            if cleaned:
+                result.append(cleaned)
+
+    return result
+
+def get_english_options_for_nt_strong(data):
+    ognt_english = data['OGNT']['description'].split("<hr>")[0].replace("<br>", "")
+    en_ugl_english_options = []
+
+    if not data.get('en_ugl'):
+        return [ognt_english]
+
+    for sense in data['en_ugl']['senses']:
+        if not sense.get('glosses'):
+            continue
+        en_ugl_english_options.append(sense['glosses'])
     
-    soup_copy = BeautifulSoup(data, "html.parser")
+    options = list(set([ognt_english] + en_ugl_english_options))
+    return options
 
-    # remove the first <b><n>…</n></b> and the second <n>
-    soup_copy.find("n").decompose()
-    soup_copy.find("n").decompose()
+def get_ugl_desc(ugl):
+    result = ""
 
-    rest = soup_copy.get_text(" ", strip=True)
+    if ugl.get('word_data'):
+        instances = ugl['word_data'].get('Instances in the New Testament')
+        if not instances:
+            instances = ugl['word_data'].get('Instances in NT')
+        if not instances:
+            instances = ugl['word_data'].get('Instances in Scripture')
+
+        if instances:
+            result += "Instances in NT: "
+            result += instances
+    
+    result += "<br/>"
+    for sense in ugl['senses']:
+        result += "<div>"
+        if sense.get('glosses'):
+            result += f"<b>{sense['glosses']}</b>"
+
+        result += f"<p>{sense['definition']}</p>"
+        result += "</div>"
+    return result
+
+def get_nt_description_data(data):
+    ognt = data['OGNT']
+
+    if not data.get('en_ugl'):
+        return f"<b>OGNT</b><div>{ognt['whole_description']}</div>"
+
+    ugl = data['en_ugl']
+
+    return f"""
+        <b>OGNT</b><div>{ognt['whole_description']}</div>
+        <b>ENUGL</b><div>{get_ugl_desc(ugl)}</div>
+    """
+
+
+def get_formatted_nt_data(data, strong_num):
+    english_options = get_english_options_for_nt_strong(data)
+    english = english_options[0]
+    description = get_nt_description_data(data)
+
+    citation_english_options = []
+    if data.get('en_ugl'):
+        if data['en_ugl'].get('senses'):
+            citation_english_options = get_english_options_from_senses(data['en_ugl']['senses'])
 
     return {
         "strong_num": strong_num,
-        "description": rest,
-        "original_language": first_greek_text,
+        "description": description,
+        "original_language": data['OGNT']['greek'],
         "language_type": "greek",
-        "english": "UNSET",
+        "english": english,
+        "english_options": english_options,
+        "citation_options": citation_english_options
     }
 
 def get_ot_chapter_data(book_index, chapter):
@@ -432,10 +549,11 @@ def get_candidates(items, word, key, exact_match=True):
 
     return candidates
 
-def get_candidates_shortened(items, word, key, exact_match):
+def get_word_adjacent_candidates(items, word, key, exact_match):
     word_ends = [
         "ment",
         "ites",
+        "ied",
         "ing",
         "er",
         "ed",
@@ -473,7 +591,7 @@ def get_word_info(verse_info, word, key, exact_match=True):
         return candidates
 
     elif len(candidates) == 0:
-        shortened_candidates = get_candidates_shortened(verse_info, word, key, exact_match=exact_match)
+        shortened_candidates = get_word_adjacent_candidates(verse_info, word, key, exact_match=exact_match)
 
         if len(shortened_candidates) == 1:
             return shortened_candidates
@@ -488,12 +606,19 @@ def get_word_info(verse_info, word, key, exact_match=True):
 
 def get_word_info_from_verse(verse_info, _word, is_ot):
 
-
     word = get_cleaned_alpha_text(_word)
- 
+    
+    test_word = "say"
+    if word == test_word:
+        print("found word", test_word)
+        for word_info in verse_info:
+            if test_word in str(word_info):
+                pprint(word_info)
+
+
     if is_ot:
         keys_to_check = [
-            "english"
+            "english",
             "strongs_usage",
             "ref_strongs_usage",
             "strongs_options",
@@ -502,16 +627,16 @@ def get_word_info_from_verse(verse_info, _word, is_ot):
         ]
     else:
         keys_to_check = [
-            "description"
+            "english",
+            "english_options",
+            "citation_options"
         ]
 
     for key in keys_to_check:
-        word_info = get_word_info_with_retry_exact(verse_info, word, "english")
+        word_info = get_word_info_with_retry_exact(verse_info, word, key)
         if word_info:
             if word_info[0] == "MULTIPLE CANDIDATES":
-                if not is_ot:
-                    print("multiple")
                 return None
-            return english_word_info[0]
+            return word_info[0]
 
     return None
