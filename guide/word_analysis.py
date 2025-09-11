@@ -337,7 +337,9 @@ def get_english_options_from_senses(senses):
     result = []
 
     for sense in senses:
-        citations = sense['citations']
+        citations = sense.get('citations')
+        if not citations:
+            continue
 
         for citation in citations:
             patterns = [
@@ -392,8 +394,9 @@ def get_ugl_desc(ugl):
         result += "<div>"
         if sense.get('glosses'):
             result += f"<b>{sense['glosses']}</b>"
-
-        result += f"<p>{sense['definition']}</p>"
+        
+        if sense.get("definition"):
+            result += f"<p>{sense['definition']}</p>"
         result += "</div>"
     return result
 
