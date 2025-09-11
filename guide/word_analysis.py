@@ -409,8 +409,8 @@ def get_nt_description_data(data):
     ugl = data['en_ugl']
 
     return f"""
-        <b>OGNT</b><div>{ognt['whole_description']}</div>
         <b>ENUGL</b><div>{get_ugl_desc(ugl)}</div>
+        <b>OGNT</b><div>{ognt['whole_description']}</div>
     """
 
 
