@@ -258,7 +258,8 @@ def get_ot_strongs_text(data):
             if bdb_data.get('em'):
                 bdb_text += bdb_data['#text'].replace(",", bdb_data['em']) + "<br/>"
             else:
-                bdb_text += bdb_data['#text']
+                if bdb_data.get("#text"):
+                    bdb_text += bdb_data['#text']
         else:
             if type(bdb_data['def']) == list:
                 bdb_usages = ", ".join(bdb_data['def'])
