@@ -91,6 +91,13 @@ function populateBookAndChapter() {
 // -----------------------------
 // START 
 // -----------------------------
+//
+function getBibleHubLink(strong_num, language_type) {
+
+  let strongNum = strong_num.replace("G", "").replace("H", "");
+
+  return `https://biblehub.com/${language_type}/${strongNum}.htm`;
+}
 
 function run() {
   const bibleTextBlock = document.getElementById("bible-text");
@@ -105,8 +112,10 @@ function run() {
       let verse = e.target.parentNode.id.replace("verse", "");
       let wordInfo = getWordInfo(verse, strongNum);
 
+    
+
       let debugInfo = `
-        <div>English: <b>${wordInfo.english}</b></div><div><span>Original Language: </span><span class="originallanguage">${wordInfo.original_language}</span><span class="strongnum"><a href="https://biblehub.com/${wordInfo.language_type}/${wordInfo.strong_num}.htm" target="_blank">(${wordInfo.strong_num})</a></span></div><div class="strongtext">${wordInfo.description}</div>`
+        <div>English: <b>${wordInfo.english}</b></div><div><span>Original Language: </span><span class="originallanguage">${wordInfo.original_language}</span><span class="strongnum"><a href="${getBibleHubLink(wordInfo.strong_num, wordInfo.language_type)}" target="_blank">(${wordInfo.strong_num})</a></span></div><div class="strongtext">${wordInfo.description}</div>`
       debugText.innerHTML = debugInfo;
     }
   })
